@@ -1,0 +1,47 @@
+package repository
+
+import (
+	"context"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
+	"os"
+	"time"
+)
+
+const (
+	MaxOpenConns        = 25
+	MaxIdleConns        = 25
+	MaxIdleTime         = "15m"
+	DefaultQueryTimeout = 5
+)
+
+type Postgres struct {
+	db *sqlx.DB
+}
+
+func NewPostgres(dsn string) (*sqlx.DB, error) {
+	db, err := sqlx.Connect("postgres", os.Getenv("POSTGRES_DSN"))
+	if err != nil {
+		return nil, err
+	}
+
+	db.SetMaxOpenConns(MaxOpenConns)
+	db.SetMaxIdleConns(MaxIdleConns)
+
+	duration, err := time.ParseDuration(MaxIdleTime)
+	if err != nil {
+		return nil, err
+	}
+
+	db.SetConnMaxIdleTime(duration)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
