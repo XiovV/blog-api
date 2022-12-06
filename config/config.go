@@ -16,6 +16,7 @@ const (
 	postgresEnv    = "POSTGRES_DSN"
 	portEnv        = "PORT"
 	environmentEnv = "ENV"
+	signingKey     = "SIGNING_KEY"
 )
 
 func New() (*Config, error) {
@@ -29,7 +30,7 @@ func New() (*Config, error) {
 		Environment: environment,
 	}
 
-	err := config.validate()
+	err := validate()
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +38,8 @@ func New() (*Config, error) {
 	return config, nil
 }
 
-func (c *Config) validate() error {
-	envVars := []string{postgresEnv, portEnv, environmentEnv}
+func validate() error {
+	envVars := []string{postgresEnv, portEnv, environmentEnv, signingKey}
 
 	missing := []string{}
 	for _, env := range envVars {
