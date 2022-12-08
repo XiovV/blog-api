@@ -18,6 +18,7 @@ const (
 type Server struct {
 	Config         *config.Config
 	UserRepository *repository.UserRepository
+	PostRepository *repository.PostRepository
 	Logger         *zap.Logger
 }
 
@@ -36,6 +37,12 @@ func (s *Server) Run() error {
 		usersPublic.POST("/register", s.registerUserHandler)
 		usersPublic.POST("/login", s.loginUserHandler)
 		usersPublic.POST("/login/mfa", s.loginUserMfaHandler)
+	}
+
+	postsAuth := v1.Group("/posts")
+	postsAuth.Use(s.userAuth)
+	{
+		postsAuth.POST("/", s.createPostHandler)
 	}
 
 	err := http.ListenAndServe(":"+s.Config.Port, router)

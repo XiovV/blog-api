@@ -35,6 +35,17 @@ func (r *UserRepository) InsertUser(user User) (int, error) {
 	return id, nil
 }
 
+func (r *UserRepository) FindUserByID(id int) (User, error) {
+	var user User
+
+	err := r.db.Get(&user, "SELECT * FROM \"user\" WHERE id = $1", id)
+	if err != nil {
+		return User{}, err
+	}
+
+	return user, nil
+}
+
 func (r *UserRepository) FindUserByUsername(username string) (User, error) {
 	var user User
 

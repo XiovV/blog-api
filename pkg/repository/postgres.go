@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"os"
 	"time"
 )
 
@@ -20,7 +19,7 @@ type Postgres struct {
 }
 
 func NewPostgres(dsn string) (*sqlx.DB, error) {
-	db, err := sqlx.Connect("postgres", os.Getenv("POSTGRES_DSN"))
+	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
 		return nil, err
 	}

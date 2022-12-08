@@ -29,10 +29,12 @@ func main() {
 	}
 
 	userRepository := repository.NewUserRepository(db)
+	postRepository := repository.NewPostRepository(db)
 
 	s := server.Server{
 		Config:         c,
 		UserRepository: userRepository,
+		PostRepository: postRepository,
 		Logger:         logger,
 	}
 
