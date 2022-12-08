@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/XiovV/blog-api/config"
 	"github.com/XiovV/blog-api/pkg/repository"
 	"github.com/XiovV/blog-api/server"
@@ -11,8 +12,10 @@ import (
 func main() {
 	c, err := config.New()
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("config err:", err)
 	}
+
+	fmt.Println(c)
 
 	logger, err := initLogger()
 	if err != nil {
@@ -28,11 +31,12 @@ func main() {
 	userRepository := repository.NewUserRepository(db)
 
 	s := server.Server{
+		Config:         c,
 		UserRepository: userRepository,
 		Logger:         logger,
 	}
 
-	if err := s.Run(c.Port); err != nil {
+	if err := s.Run(); err != nil {
 		logger.Error("couldn't start server", zap.Error(err))
 	}
 }

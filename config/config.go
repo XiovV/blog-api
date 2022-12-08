@@ -1,56 +1,25 @@
 package config
 
 import (
-	"errors"
-	"os"
-	"strings"
+	"fmt"
+	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
-	PostgresDSN string
-	Port        string
-	Environment string
+	PostgresDSN string `env:"POSTGRES_DSN" env-required:"true"`
+	Port        string `env:"PORT" env-default:"8080"`
+	Environment string `env:"ENV" env-default:"PRODUCTION"`
+	AESKey      string `env:"AES_KEY" env-required:"true"`
 }
 
-const (
-	postgresEnv    = "POSTGRES_DSN"
-	portEnv        = "PORT"
-	environmentEnv = "ENV"
-	signingKey     = "SIGNING_KEY"
-)
-
 func New() (*Config, error) {
-	postgres := os.Getenv(postgresEnv)
-	port := os.Getenv(portEnv)
-	environment := os.Getenv(environmentEnv)
+	var cfg Config
 
-	config := &Config{
-		PostgresDSN: postgres,
-		Port:        port,
-		Environment: environment,
-	}
-
-	err := validate()
+	err := cleanenv.ReadEnv(&cfg)
 	if err != nil {
+		fmt.Println("err", err)
 		return nil, err
 	}
 
-	return config, nil
-}
-
-func validate() error {
-	envVars := []string{postgresEnv, portEnv, environmentEnv, signingKey}
-
-	missing := []string{}
-	for _, env := range envVars {
-		if val := os.Getenv(env); val == "" {
-			missing = append(missing, env+" needs to be specified")
-		}
-	}
-
-	if len(missing) > 0 {
-		return errors.New(strings.Join(missing, "\n"))
-	}
-
-	return nil
+	return &cfg, err
 }

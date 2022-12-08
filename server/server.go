@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/XiovV/blog-api/config"
 	"github.com/XiovV/blog-api/pkg/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -15,11 +16,12 @@ const (
 )
 
 type Server struct {
+	Config         *config.Config
 	UserRepository *repository.UserRepository
 	Logger         *zap.Logger
 }
 
-func (s *Server) Run(port string) error {
+func (s *Server) Run() error {
 	if os.Getenv("ENV") == PROD_ENV {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -36,7 +38,7 @@ func (s *Server) Run(port string) error {
 		usersPublic.POST("/login/mfa", s.loginUserMfaHandler)
 	}
 
-	err := http.ListenAndServe(":"+port, router)
+	err := http.ListenAndServe(":"+s.Config.Port, router)
 	if err != nil {
 		return err
 	}
