@@ -32,7 +32,8 @@ func (s *Server) Run(port string) error {
 	usersPublic := v1.Group("/users")
 	{
 		usersPublic.POST("/register", s.registerUserHandler)
-		usersPublic.POST("/login")
+		usersPublic.POST("/login", s.loginUserHandler)
+		usersPublic.POST("/login/mfa", s.loginUserMfaHandler)
 	}
 
 	err := http.ListenAndServe(":"+port, router)
