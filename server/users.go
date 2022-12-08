@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"net/mail"
+	"strings"
 )
 
 func (s *Server) registerUserHandler(c *gin.Context) {
@@ -21,6 +22,9 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		s.invalidJSONResponse(c)
 		return
 	}
+
+	request.Username = strings.TrimSpace(request.Username)
+	request.Email = strings.TrimSpace(request.Email)
 
 	v := validator.New()
 
