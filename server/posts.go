@@ -66,6 +66,32 @@ func (s *Server) createPostHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, res)
 }
 
+func (s *Server) getPostHandler(c *gin.Context) {
+	postId, err := strconv.Atoi(c.Param("postId"))
+	if err != nil {
+		s.badRequestResponse(c, "post id must be an integer")
+		return
+	}
+
+	post, err := s.PostRepository.FindPostByPostID(postId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "the post could be found"})
+		return
+	}
+
+	type response struct {
+		ID    int    `json:"id"`
+		Title string `json:"title"`
+		Body  string `json:"body"`
+	}
+
+	c.JSON(http.StatusOK, response{
+		ID:    post.ID,
+		Title: post.Title,
+		Body:  post.Body,
+	})
+}
+
 func (s *Server) deletePostHandler(c *gin.Context) {
 	user := s.getUserFromContext(c)
 

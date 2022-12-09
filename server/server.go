@@ -63,6 +63,7 @@ func (s *Server) Run() error {
 	postsAuth.Use(s.userAuth)
 	{
 		postsAuth.POST("/", s.createPostHandler)
+		postsAuth.GET("/:postId", s.getPostHandler)
 		postsAuth.DELETE("/:postId", s.deletePostHandler)
 	}
 
