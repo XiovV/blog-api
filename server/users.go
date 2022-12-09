@@ -12,6 +12,11 @@ import (
 	"strings"
 )
 
+const (
+	totpSecretLength = 32
+	totpCodeLength   = 6
+)
+
 func (s *Server) registerUserHandler(c *gin.Context) {
 	var request struct {
 		Username string `json:"username"`
@@ -219,7 +224,6 @@ func (s *Server) setupMfaHandler(c *gin.Context) {
 func (s *Server) confirmMfaHandler(c *gin.Context) {
 	user := s.getUserFromContext(c)
 
-	//TODO: validate this
 	var request struct {
 		Secret string `json:"secret"`
 		TOTP   string `json:"totp"`
@@ -230,7 +234,17 @@ func (s *Server) confirmMfaHandler(c *gin.Context) {
 		return
 	}
 
-	ok := totp.Validate(request.TOTP, request.Secret)
+	v := validator.New()
+	v.RequiredExact("secret", request.Secret, totpSecretLength)
+	v.RequiredExact("totp", request.TOTP, totpCodeLength)
+
+	ok, errors := v.IsValid()
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors})
+		return
+	}
+
+	ok = totp.Validate(request.TOTP, request.Secret)
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid totp code"})
 		return

@@ -16,6 +16,12 @@ func (v *Validator) RequiredMax(key, value string, max int) {
 	}
 }
 
+func (v *Validator) RequiredExact(key, value string, n int) {
+	if len(value) != n {
+		v.addError(fmt.Sprintf("%s must be exactly %d characters long", key, n))
+	}
+}
+
 func (v *Validator) RequiredMin(key, value string, min int) {
 	if len(value) < min {
 		v.addError(fmt.Sprintf("%s must be at least %d characters long", key, min))

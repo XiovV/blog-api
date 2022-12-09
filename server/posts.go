@@ -2,10 +2,15 @@ package server
 
 import (
 	"github.com/XiovV/blog-api/pkg/repository"
+	"github.com/XiovV/blog-api/pkg/validator"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
 	"strings"
+)
+
+const (
+	maxTitleLenght = 256
 )
 
 func (s *Server) createPostHandler(c *gin.Context) {
@@ -28,6 +33,15 @@ func (s *Server) createPostHandler(c *gin.Context) {
 	}
 
 	request.Title = strings.TrimSpace(request.Title)
+
+	v := validator.New()
+	v.RequiredMax("title", request.Title, maxTitleLenght)
+
+	ok, errors := v.IsValid()
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors})
+		return
+	}
 
 	post := repository.Post{
 		UserID: user.ID,
