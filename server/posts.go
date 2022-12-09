@@ -38,7 +38,7 @@ func (s *Server) createPostHandler(c *gin.Context) {
 	newPost, err := s.PostRepository.InsertPost(post)
 	if err != nil {
 		s.Logger.Error("couldn't insert post", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		s.internalServerErrorResponse(c)
 		return
 	}
 

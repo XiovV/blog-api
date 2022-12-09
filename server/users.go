@@ -41,8 +41,8 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 
 	_, err := mail.ParseAddress(request.Email)
 	if err != nil {
-		s.Logger.Info("email is invalid")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "email is invalid"})
+		s.Logger.Info("email is invalid", zap.String("email", request.Email))
+		s.badRequestResponse(c, "email is invalid")
 		return
 	}
 
@@ -57,14 +57,14 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	id, err := s.UserRepository.InsertUser(repository.User{Username: request.Username, Email: request.Email, Password: hash})
 	if err != nil {
 		s.Logger.Debug("couldn't insert user", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "username or email are already taken"})
+		s.badRequestResponse(c, "username or email are already taken")
 		return
 	}
 
 	token, err := generateToken(id)
 	if err != nil {
 		s.Logger.Error("couldn't generate token", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		s.internalServerErrorResponse(c)
 		return
 	}
 
@@ -99,23 +99,23 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 	user, err := s.UserRepository.FindUserByUsername(request.Username)
 	if err != nil {
 		s.Logger.Error("couldn't find user", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect email or password"})
+		s.badRequestResponse(c, "incorrect username or password")
 		return
 	}
 
 	ok, err = argon2id.ComparePasswordAndHash(request.Password, user.Password)
 	if err != nil {
 		s.Logger.Error("couldn't check hash", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		s.internalServerErrorResponse(c)
 		return
 	}
 
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect email or password"})
+		s.badRequestResponse(c, "incorrect username or password")
 		return
 	}
 
-	if user.MFASecret.String != "" {
+	if len(user.MFASecret) != 0 {
 		c.Status(http.StatusFound)
 		return
 	}
@@ -123,7 +123,7 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 	token, err := generateToken(user.ID)
 	if err != nil {
 		s.Logger.Error("couldn't generate token", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		s.internalServerErrorResponse(c)
 		return
 	}
 
@@ -159,28 +159,35 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 	user, err := s.UserRepository.FindUserByUsername(request.Username)
 	if err != nil {
 		s.Logger.Error("couldn't find user", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect email or password"})
+		s.badRequestResponse(c, "incorrect username or password")
 		return
 	}
 
 	ok, err = argon2id.ComparePasswordAndHash(request.Password, user.Password)
 	if err != nil {
 		s.Logger.Error("couldn't check hash", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		s.internalServerErrorResponse(c)
 		return
 	}
 
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect email or password"})
+		s.badRequestResponse(c, "incorrect username or password")
 		return
 	}
 
-	if user.MFASecret.String == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "this user doesn't have 2fa enabled"})
+	if len(user.MFASecret) == 0 {
+		s.badRequestResponse(c, "this user doesn't have 2fa enabled")
 		return
 	}
 
-	ok = totp.Validate(request.TOTP, user.MFASecret.String)
+	secret, err := s.decryptMfaSecret(user.MFASecret)
+	if err != nil {
+		s.Logger.Error("couldn't decrypt secret", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	ok = totp.Validate(request.TOTP, string(secret))
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid totp code"})
 		return
@@ -189,9 +196,54 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 	token, err := generateToken(user.ID)
 	if err != nil {
 		s.Logger.Error("couldn't generate token", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		s.internalServerErrorResponse(c)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"jwt": token})
+}
+
+func (s *Server) setupMfaHandler(c *gin.Context) {
+	user := s.getUserFromContext(c)
+
+	key, err := totp.Generate(totp.GenerateOpts{Issuer: "blog-api", AccountName: user.Username})
+	if err != nil {
+		s.Logger.Error("couldn't generate secret", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"secret": key.Secret()})
+}
+
+func (s *Server) confirmMfaHandler(c *gin.Context) {
+	user := s.getUserFromContext(c)
+
+	//TODO: validate this
+	var request struct {
+		Secret string `json:"secret"`
+		TOTP   string `json:"totp"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		s.invalidJSONResponse(c)
+		return
+	}
+
+	ok := totp.Validate(request.TOTP, request.Secret)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid totp code"})
+		return
+	}
+
+	encryptedSecret := s.encryptMfaSecret([]byte(request.Secret))
+
+	err := s.UserRepository.InsertMfaSecret(user.ID, encryptedSecret)
+	if err != nil {
+		s.Logger.Error("couldn't insert secret", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	c.Status(http.StatusOK)
 }

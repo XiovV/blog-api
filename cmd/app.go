@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/XiovV/blog-api/config"
 	"github.com/XiovV/blog-api/pkg/repository"
 	"github.com/XiovV/blog-api/server"
@@ -14,8 +13,6 @@ func main() {
 	if err != nil {
 		log.Fatalln("config err:", err)
 	}
-
-	fmt.Println(c)
 
 	logger, err := initLogger()
 	if err != nil {

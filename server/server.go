@@ -1,6 +1,8 @@
 package server
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"github.com/XiovV/blog-api/config"
 	"github.com/XiovV/blog-api/pkg/repository"
 	"github.com/gin-gonic/gin"
@@ -20,9 +22,18 @@ type Server struct {
 	UserRepository *repository.UserRepository
 	PostRepository *repository.PostRepository
 	Logger         *zap.Logger
+
+	gcm cipher.AEAD
 }
 
 func (s *Server) Run() error {
+	gcm, err := s.setupGcm()
+	if err != nil {
+		return err
+	}
+
+	s.gcm = gcm
+
 	if os.Getenv("ENV") == PROD_ENV {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -39,16 +50,37 @@ func (s *Server) Run() error {
 		usersPublic.POST("/login/mfa", s.loginUserMfaHandler)
 	}
 
+	usersAuth := v1.Group("/users")
+	usersAuth.Use(s.userAuth)
+	{
+		usersAuth.POST("/mfa", s.setupMfaHandler)
+		usersAuth.POST("/mfa/confirm", s.confirmMfaHandler)
+	}
+
 	postsAuth := v1.Group("/posts")
 	postsAuth.Use(s.userAuth)
 	{
 		postsAuth.POST("/", s.createPostHandler)
 	}
 
-	err := http.ListenAndServe(":"+s.Config.Port, router)
+	err = http.ListenAndServe(":"+s.Config.Port, router)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *Server) setupGcm() (cipher.AEAD, error) {
+	block, err := aes.NewCipher([]byte(s.Config.AESKey))
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	return gcm, nil
 }

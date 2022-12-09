@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 )
@@ -15,7 +14,7 @@ type User struct {
 	Username  string
 	Email     string
 	Password  string
-	MFASecret sql.NullString `db:"mfa_secret"`
+	MFASecret []byte `db:"mfa_secret"`
 }
 
 func NewUserRepository(db *sqlx.DB) *UserRepository {
@@ -33,6 +32,15 @@ func (r *UserRepository) InsertUser(user User) (int, error) {
 	fmt.Println(id)
 
 	return id, nil
+}
+
+func (r *UserRepository) InsertMfaSecret(userId int, secret []byte) error {
+	_, err := r.db.Exec("UPDATE \"user\" SET mfa_secret = $1 WHERE id = $2", secret, userId)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *UserRepository) FindUserByID(id int) (User, error) {
