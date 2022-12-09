@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"github.com/XiovV/blog-api/config"
 	"github.com/XiovV/blog-api/pkg/repository"
+	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
@@ -22,6 +23,7 @@ type Server struct {
 	UserRepository *repository.UserRepository
 	PostRepository *repository.PostRepository
 	Logger         *zap.Logger
+	CasbinEnforcer *casbin.Enforcer
 
 	gcm cipher.AEAD
 }
@@ -61,6 +63,7 @@ func (s *Server) Run() error {
 	postsAuth.Use(s.userAuth)
 	{
 		postsAuth.POST("/", s.createPostHandler)
+		postsAuth.DELETE("/:postId", s.deletePostHandler)
 	}
 
 	err = http.ListenAndServe(":"+s.Config.Port, router)

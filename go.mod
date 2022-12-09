@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/alexedwards/argon2id v0.0.0-20211130144151-3585854a6387
+	github.com/casbin/casbin/v2 v2.60.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/ilyakaznacheev/cleanenv v1.4.1
@@ -15,6 +16,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.1.0 // indirect
+	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect

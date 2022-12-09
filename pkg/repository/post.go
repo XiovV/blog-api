@@ -27,3 +27,19 @@ func (r *PostRepository) InsertPost(post Post) (Post, error) {
 
 	return newPost, nil
 }
+
+func (r *PostRepository) FindPostByPostID(postId int) (Post, error) {
+	var post Post
+
+	err := r.db.Get(&post, "SELECT * FROM post WHERE id = $1", postId)
+	if err != nil {
+		return Post{}, err
+	}
+
+	return post, nil
+}
+
+func (r *PostRepository) DeletePostByPostID(postId int) error {
+	_, err := r.db.Exec("DELETE FROM post WHERE id = $1", postId)
+	return err
+}

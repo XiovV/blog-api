@@ -4,6 +4,7 @@ import (
 	"github.com/XiovV/blog-api/config"
 	"github.com/XiovV/blog-api/pkg/repository"
 	"github.com/XiovV/blog-api/server"
+	"github.com/casbin/casbin/v2"
 	"go.uber.org/zap"
 	"log"
 )
@@ -28,11 +29,18 @@ func main() {
 	userRepository := repository.NewUserRepository(db)
 	postRepository := repository.NewPostRepository(db)
 
+	enforcer, err := casbin.NewEnforcer("rbac/rbac_model.conf", "rbac/rbac_policy.csv")
+	if err != nil {
+		logger.Error("couldn't init enforcer", zap.Error(err))
+		return
+	}
+
 	s := server.Server{
 		Config:         c,
 		UserRepository: userRepository,
 		PostRepository: postRepository,
 		Logger:         logger,
+		CasbinEnforcer: enforcer,
 	}
 
 	if err := s.Run(); err != nil {
