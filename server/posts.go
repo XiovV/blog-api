@@ -79,6 +79,7 @@ func (s *Server) getPostHandler(c *gin.Context) {
 		return
 	}
 
+	//TODO: add author info here
 	type response struct {
 		ID    int    `json:"id"`
 		Title string `json:"title"`
