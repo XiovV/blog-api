@@ -39,14 +39,14 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 
 	ok, errors := v.IsValid()
 	if !ok {
-		s.Logger.Info("input invalid", zap.Strings("err", errors))
+		s.Logger.Debug("input invalid", zap.Strings("err", errors))
 		c.JSON(http.StatusBadRequest, gin.H{"error": errors})
 		return
 	}
 
 	_, err := mail.ParseAddress(request.Email)
 	if err != nil {
-		s.Logger.Info("email is invalid", zap.String("email", request.Email))
+		s.Logger.Debug("email is invalid", zap.String("email", request.Email))
 		s.badRequestResponse(c, "email is invalid")
 		return
 	}
@@ -83,6 +83,7 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
+		s.Logger.Debug("json is invalid", zap.Error(err))
 		s.invalidJSONResponse(c)
 		return
 	}
@@ -96,26 +97,27 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 
 	ok, errors := v.IsValid()
 	if !ok {
-		s.Logger.Info("input invalid", zap.Strings("err", errors))
+		s.Logger.Debug("input invalid", zap.Strings("err", errors))
 		c.JSON(http.StatusBadRequest, gin.H{"error": errors})
 		return
 	}
 
 	user, err := s.UserRepository.FindUserByUsername(request.Username)
 	if err != nil {
-		s.Logger.Error("couldn't find user", zap.Error(err))
+		s.Logger.Debug("couldn't find user", zap.Error(err), zap.String("username", request.Username))
 		s.badRequestResponse(c, "incorrect username or password")
 		return
 	}
 
 	ok, err = argon2id.ComparePasswordAndHash(request.Password, user.Password)
 	if err != nil {
-		s.Logger.Error("couldn't check hash", zap.Error(err))
+		s.Logger.Error("couldn't check hash", zap.Error(err), zap.String("username", request.Username))
 		s.internalServerErrorResponse(c)
 		return
 	}
 
 	if !ok {
+		s.Logger.Debug("incorrect password", zap.String("username", request.Username))
 		s.badRequestResponse(c, "incorrect username or password")
 		return
 	}
@@ -143,6 +145,7 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
+		s.Logger.Debug("json is invalid", zap.Error(err))
 		s.invalidJSONResponse(c)
 		return
 	}
@@ -230,6 +233,7 @@ func (s *Server) confirmMfaHandler(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
+		s.Logger.Debug("json is invalid", zap.Error(err))
 		s.invalidJSONResponse(c)
 		return
 	}

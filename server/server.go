@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
-	"os"
 )
 
 const (
@@ -29,14 +28,12 @@ type Server struct {
 }
 
 func (s *Server) Run() error {
-	gcm, err := s.setupGcm()
+	err := s.setupGcm()
 	if err != nil {
 		return err
 	}
 
-	s.gcm = gcm
-
-	if os.Getenv("ENV") == PROD_ENV {
+	if s.Config.Environment == PROD_ENV {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -67,24 +64,26 @@ func (s *Server) Run() error {
 		postsAuth.DELETE("/:postId", s.deletePostHandler)
 	}
 
+	s.Logger.Info("server listening...", zap.String("port", s.Config.Port), zap.String("env", s.Config.Environment))
 	err = http.ListenAndServe(":"+s.Config.Port, router)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func (s *Server) setupGcm() (cipher.AEAD, error) {
+func (s *Server) setupGcm() error {
 	block, err := aes.NewCipher([]byte(s.Config.AESKey))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return gcm, nil
+	s.gcm = gcm
+
+	return nil
 }

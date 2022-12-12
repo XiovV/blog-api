@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"fmt"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -35,8 +34,6 @@ func (r *UserRepository) InsertUser(user User) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	fmt.Println(id)
 
 	return id, nil
 }

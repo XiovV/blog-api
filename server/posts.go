@@ -29,6 +29,7 @@ func (s *Server) createPostHandler(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
+		s.Logger.Debug("json is invalid", zap.Error(err))
 		s.invalidJSONResponse(c)
 		return
 	}
@@ -40,6 +41,7 @@ func (s *Server) createPostHandler(c *gin.Context) {
 
 	ok, errors := v.IsValid()
 	if !ok {
+		s.Logger.Debug("input is invalid", zap.Strings("error", errors))
 		c.JSON(http.StatusBadRequest, gin.H{"error": errors})
 		return
 	}
@@ -69,12 +71,14 @@ func (s *Server) createPostHandler(c *gin.Context) {
 func (s *Server) getPostHandler(c *gin.Context) {
 	postId, err := strconv.Atoi(c.Param("postId"))
 	if err != nil {
+		s.Logger.Debug("post id not an integer", zap.String("postId", c.Param("postId")))
 		s.badRequestResponse(c, "post id must be an integer")
 		return
 	}
 
 	post, err := s.PostRepository.FindPostByPostID(postId)
 	if err != nil {
+		s.Logger.Debug("post could not be found", zap.Error(err), zap.Int("postId", postId))
 		c.JSON(http.StatusNotFound, gin.H{"error": "the post could be found"})
 		return
 	}
@@ -98,13 +102,14 @@ func (s *Server) deletePostHandler(c *gin.Context) {
 
 	postId, err := strconv.Atoi(c.Param("postId"))
 	if err != nil {
+		s.Logger.Debug("post id not an integer", zap.String("postId", c.Param("postId")))
 		s.badRequestResponse(c, "post id must be an integer")
 		return
 	}
 
 	post, err := s.PostRepository.FindPostByPostID(postId)
 	if err != nil {
-		s.Logger.Error("couldn't find post", zap.Error(err))
+		s.Logger.Debug("post could not be found", zap.Error(err), zap.Int("postId", postId))
 		c.JSON(http.StatusNotFound, gin.H{"error": "the post could not be found"})
 		return
 	}
@@ -112,12 +117,13 @@ func (s *Server) deletePostHandler(c *gin.Context) {
 	if post.UserID != user.ID {
 		ok, err := s.CasbinEnforcer.Enforce(user.Role, "post", "delete")
 		if err != nil {
-			s.Logger.Error("error enforcing rules", zap.Error(err))
+			s.Logger.Error("error enforcing rules", zap.Error(err), zap.String("username", user.Username))
 			s.internalServerErrorResponse(c)
 			return
 		}
 
 		if !ok {
+			s.Logger.Debug("user has insufficient permissions", zap.String("username", user.Username), zap.String("role", user.Role))
 			c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
 			return
 		}
@@ -125,7 +131,7 @@ func (s *Server) deletePostHandler(c *gin.Context) {
 
 	err = s.PostRepository.DeletePostByPostID(postId)
 	if err != nil {
-		s.Logger.Error("couldn't delete post", zap.Error(err))
+		s.Logger.Error("couldn't delete post", zap.Error(err), zap.Int("postId", postId))
 		s.internalServerErrorResponse(c)
 		return
 	}
