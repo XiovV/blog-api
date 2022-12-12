@@ -157,7 +157,6 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 	v := validator.New()
 
 	v.RequiredMax("username", request.Username, 50)
-	v.RequiredMin("password", request.Password, 8)
 
 	ok, errors := v.IsValid()
 	if !ok {
@@ -216,6 +215,76 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"jwt": token})
 }
 
+func (s *Server) loginUserRecoveryHandler(c *gin.Context) {
+	var request struct {
+		Username     string `json:"username"`
+		Password     string `json:"password"`
+		RecoveryCode string `json:"recovery_code"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		s.Logger.Debug("json is invalid", zap.Error(err))
+		s.invalidJSONResponse(c)
+		return
+	}
+
+	request.Username = strings.TrimSpace(request.Username)
+
+	v := validator.New()
+
+	v.RequiredMax("username", request.Username, 50)
+
+	ok, errors := v.IsValid()
+	if !ok {
+		s.Logger.Debug("input invalid", zap.Strings("err", errors))
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors})
+		return
+	}
+
+	user, err := s.UserRepository.FindUserByUsername(request.Username)
+	if err != nil {
+		s.Logger.Debug("couldn't find user", zap.Error(err))
+		s.badRequestResponse(c, "incorrect username or password")
+		return
+	}
+
+	ok, err = argon2id.ComparePasswordAndHash(request.Password, user.Password)
+	if err != nil {
+		s.Logger.Error("couldn't check hash", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	if !ok {
+		s.Logger.Debug("password is incorrect", zap.String("username", user.Username))
+		s.badRequestResponse(c, "incorrect username or password")
+		return
+	}
+
+	recoveryCodes, err := s.UserRepository.GetUserRecoveryCodes(user.Username)
+	if err != nil {
+		s.Logger.Error("couldn't get recovery codes", zap.Error(err), zap.String("username", user.Username))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	for _, code := range recoveryCodes {
+		if request.RecoveryCode == code {
+			token, err := generateToken(user.ID)
+			if err != nil {
+				s.Logger.Error("couldn't generate token", zap.Error(err))
+				s.internalServerErrorResponse(c)
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"jwt": token})
+			return
+		}
+	}
+
+	s.badRequestResponse(c, "incorrect recovery code")
+}
+
 func (s *Server) setupMfaHandler(c *gin.Context) {
 	user := s.getUserFromContext(c)
 
@@ -263,14 +332,16 @@ func (s *Server) confirmMfaHandler(c *gin.Context) {
 
 	encryptedSecret := s.encryptMfaSecret([]byte(request.Secret))
 
-	err := s.UserRepository.InsertMfaSecret(user.ID, encryptedSecret)
+	recoveryCodes := s.generateRecoveryCodes()
+
+	err := s.UserRepository.InsertMfaSecret(user.ID, encryptedSecret, recoveryCodes)
 	if err != nil {
 		s.Logger.Error("couldn't insert secret", zap.Error(err))
 		s.internalServerErrorResponse(c)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	c.JSON(http.StatusOK, gin.H{"recovery_codes": strings.Join(recoveryCodes, ", ")})
 }
 
 func (s *Server) getUserPosts(c *gin.Context) {

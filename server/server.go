@@ -47,6 +47,7 @@ func (s *Server) Run() error {
 		usersPublic.POST("/register", s.registerUserHandler)
 		usersPublic.POST("/login", s.loginUserHandler)
 		usersPublic.POST("/login/mfa", s.loginUserMfaHandler)
+		usersPublic.POST("/login/recovery", s.loginUserRecoveryHandler)
 	}
 
 	usersAuth := v1.Group("/users")

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type UserRepository struct {
@@ -38,8 +39,8 @@ func (r *UserRepository) InsertUser(user User) (int, error) {
 	return id, nil
 }
 
-func (r *UserRepository) InsertMfaSecret(userId int, secret []byte) error {
-	_, err := r.db.Exec("UPDATE \"user\" SET mfa_secret = $1 WHERE id = $2", secret, userId)
+func (r *UserRepository) InsertMfaSecret(userId int, secret []byte, recoveryCodes []string) error {
+	_, err := r.db.Exec("UPDATE \"user\" SET mfa_secret = $1, recovery = $2 WHERE id = $3", secret, pq.Array(recoveryCodes), userId)
 	if err != nil {
 		return err
 	}
@@ -61,10 +62,22 @@ func (r *UserRepository) FindUserByID(id int) (User, error) {
 func (r *UserRepository) FindUserByUsername(username string) (User, error) {
 	var user User
 
-	err := r.db.Get(&user, "SELECT * FROM \"user\" WHERE username = $1", username)
+	err := r.db.Get(&user, "SELECT \"user\".id, username, email, password, mfa_secret FROM \"user\" WHERE username = $1", username)
 	if err != nil {
 		return User{}, err
 	}
 
 	return user, nil
+}
+
+func (r *UserRepository) GetUserRecoveryCodes(username string) ([]string, error) {
+	var recoveryCodes []string
+
+	row := r.db.QueryRowx("SELECT recovery FROM \"user\" WHERE username = $1", username)
+	err := row.Scan(pq.Array(&recoveryCodes))
+	if err != nil {
+		return nil, err
+	}
+
+	return recoveryCodes, nil
 }
