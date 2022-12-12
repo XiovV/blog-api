@@ -72,3 +72,22 @@ func randomString() string {
 
 	return string(b)
 }
+
+func removeRecoveryCode(s []string, r string) []string {
+	for i, v := range s {
+		if v == r {
+			return append(s[:i], s[i+1:]...)
+		}
+	}
+	return s
+}
+
+func (s *Server) isRecoveryCodeValid(recoveryCode string, codes []string) bool {
+	for _, code := range codes {
+		if recoveryCode == code {
+			return true
+		}
+	}
+
+	return false
+}

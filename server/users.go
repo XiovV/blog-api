@@ -268,21 +268,31 @@ func (s *Server) loginUserRecoveryHandler(c *gin.Context) {
 		return
 	}
 
-	for _, code := range recoveryCodes {
-		if request.RecoveryCode == code {
-			token, err := generateToken(user.ID)
-			if err != nil {
-				s.Logger.Error("couldn't generate token", zap.Error(err))
-				s.internalServerErrorResponse(c)
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{"jwt": token})
-			return
-		}
+	ok = s.isRecoveryCodeValid(request.RecoveryCode, recoveryCodes)
+	if !ok {
+		s.Logger.Debug("incorrect recovery code", zap.String("code", request.RecoveryCode), zap.String("username", request.Username))
+		s.badRequestResponse(c, "incorrect recovery code")
+		return
 	}
 
-	s.badRequestResponse(c, "incorrect recovery code")
+	recoveryCodesUpdated := removeRecoveryCode(recoveryCodes, request.RecoveryCode)
+
+	err = s.UserRepository.SetRecoveryCodes(user.ID, recoveryCodesUpdated)
+	if err != nil {
+		s.Logger.Error("couldn't update recovery codes", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	token, err := generateToken(user.ID)
+	if err != nil {
+		s.Logger.Error("couldn't generate token", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"jwt": token})
+
 }
 
 func (s *Server) setupMfaHandler(c *gin.Context) {

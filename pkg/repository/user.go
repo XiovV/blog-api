@@ -48,6 +48,15 @@ func (r *UserRepository) InsertMfaSecret(userId int, secret []byte, recoveryCode
 	return nil
 }
 
+func (r *UserRepository) SetRecoveryCodes(userId int, recoveryCodes []string) error {
+	_, err := r.db.Exec("UPDATE \"user\" SET recovery = $1 WHERE id = $2", pq.Array(recoveryCodes), userId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *UserRepository) FindUserByID(id int) (User, error) {
 	var user User
 
