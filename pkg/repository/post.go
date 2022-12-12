@@ -43,3 +43,14 @@ func (r *PostRepository) DeletePostByPostID(postId int) error {
 	_, err := r.db.Exec("DELETE FROM post WHERE id = $1", postId)
 	return err
 }
+
+func (r *PostRepository) FindByUserID(userId, page, limit int) ([]Post, error) {
+	var posts []Post
+
+	err := r.db.Select(&posts, "SELECT * FROM post WHERE user_id = $1 LIMIT $2 OFFSET $3", userId, limit, calculateOffset(page, limit))
+	if err != nil {
+		return nil, err
+	}
+
+	return posts, nil
+}

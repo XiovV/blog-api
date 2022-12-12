@@ -44,3 +44,7 @@ func NewPostgres(dsn string) (*sqlx.DB, error) {
 
 	return db, nil
 }
+
+func calculateOffset(page, limit int) int {
+	return (page - 1) * limit
+}

@@ -54,6 +54,7 @@ func (s *Server) Run() error {
 	{
 		usersAuth.POST("/mfa", s.setupMfaHandler)
 		usersAuth.POST("/mfa/confirm", s.confirmMfaHandler)
+		usersAuth.GET("/posts", s.getUserPosts)
 	}
 
 	postsAuth := v1.Group("/posts")

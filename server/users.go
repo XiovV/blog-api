@@ -25,6 +25,7 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
+		s.Logger.Debug("json is invalid", zap.Error(err))
 		s.invalidJSONResponse(c)
 		return
 	}
@@ -123,6 +124,7 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 	}
 
 	if len(user.MFASecret) != 0 {
+		s.Logger.Debug("user has 2fa enabled", zap.String("username", request.Username))
 		c.Status(http.StatusFound)
 		return
 	}
@@ -159,14 +161,14 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 
 	ok, errors := v.IsValid()
 	if !ok {
-		s.Logger.Info("input invalid", zap.Strings("err", errors))
+		s.Logger.Debug("input invalid", zap.Strings("err", errors))
 		c.JSON(http.StatusBadRequest, gin.H{"error": errors})
 		return
 	}
 
 	user, err := s.UserRepository.FindUserByUsername(request.Username)
 	if err != nil {
-		s.Logger.Error("couldn't find user", zap.Error(err))
+		s.Logger.Debug("couldn't find user", zap.Error(err))
 		s.badRequestResponse(c, "incorrect username or password")
 		return
 	}
@@ -179,11 +181,13 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 	}
 
 	if !ok {
+		s.Logger.Debug("password is incorrect", zap.String("username", user.Username))
 		s.badRequestResponse(c, "incorrect username or password")
 		return
 	}
 
 	if len(user.MFASecret) == 0 {
+		s.Logger.Debug("user doesn't have 2fa enabled", zap.String("username", request.Username))
 		s.badRequestResponse(c, "this user doesn't have 2fa enabled")
 		return
 	}
@@ -197,6 +201,7 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 
 	ok = totp.Validate(request.TOTP, string(secret))
 	if !ok {
+		s.Logger.Debug("invalid totp code", zap.String("totp", request.TOTP))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid totp code"})
 		return
 	}
@@ -244,12 +249,14 @@ func (s *Server) confirmMfaHandler(c *gin.Context) {
 
 	ok, errors := v.IsValid()
 	if !ok {
+		s.Logger.Debug("input invalid", zap.Strings("err", errors))
 		c.JSON(http.StatusBadRequest, gin.H{"error": errors})
 		return
 	}
 
 	ok = totp.Validate(request.TOTP, request.Secret)
 	if !ok {
+		s.Logger.Debug("invalid totp code", zap.String("totp", request.TOTP))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid totp code"})
 		return
 	}
@@ -264,4 +271,38 @@ func (s *Server) confirmMfaHandler(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+func (s *Server) getUserPosts(c *gin.Context) {
+	type response struct {
+		ID    int    `json:"id"`
+		Title string `json:"title"`
+		Body  string `json:"body"`
+	}
+
+	page, limit, err := s.validatePageAndLimit(c)
+	if err != nil {
+		s.Logger.Debug("invalid page and limit", zap.Error(err), zap.String("page", c.Query("page")), zap.String("limit", c.Query("limit")))
+		s.badRequestResponse(c, err.Error())
+		return
+	}
+
+	user := s.getUserFromContext(c)
+	posts, err := s.PostRepository.FindByUserID(user.ID, page, limit)
+	if err != nil {
+		s.Logger.Debug("couldn't find user's posts", zap.String("username", user.Username))
+		c.JSON(http.StatusNotFound, gin.H{"error": "user doesn't have any posts"})
+		return
+	}
+
+	var res []response
+	for _, post := range posts {
+		res = append(res, response{
+			ID:    post.ID,
+			Title: post.Title,
+			Body:  post.Body,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"posts": res})
 }
