@@ -52,7 +52,7 @@ func (s *Server) decryptMfaSecret(encryptedSecret []byte) ([]byte, error) {
 	return s.gcm.Open(nil, nonce, cipherText, nil)
 }
 
-func (s *Server) generateRecoveryCodes() []string {
+func generateRecoveryCodes() []string {
 	codes := []string{}
 
 	for i := 0; i <= RecoveryCodesAmount; i++ {

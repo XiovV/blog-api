@@ -138,3 +138,45 @@ func (s *Server) deletePostHandler(c *gin.Context) {
 
 	s.successResponse(c, "post deleted successfully")
 }
+
+func (s *Server) getUserPostsHandler(c *gin.Context) {
+	type response struct {
+		ID    int    `json:"id"`
+		Title string `json:"title"`
+		Body  string `json:"body"`
+	}
+
+	page, limit, err := s.validatePageAndLimit(c)
+	if err != nil {
+		s.Logger.Debug("invalid page and limit", zap.Error(err), zap.String("page", c.Query("page")), zap.String("limit", c.Query("limit")))
+		s.badRequestResponse(c, err.Error())
+		return
+	}
+
+	username := c.Param("username")
+
+	user, err := s.UserRepository.FindUserByUsername(username)
+	if err != nil {
+		s.Logger.Debug("couldn't find user", zap.Error(err), zap.String("username", username))
+		c.JSON(http.StatusNotFound, gin.H{"error": "couldn't find user"})
+		return
+	}
+
+	posts, err := s.PostRepository.FindByUserID(user.ID, page, limit)
+	if err != nil {
+		s.Logger.Debug("couldn't find user posts", zap.Error(err), zap.String("username", username))
+		c.JSON(http.StatusNotFound, gin.H{"error": "this user has no posts"})
+		return
+	}
+
+	var res []response
+	for _, post := range posts {
+		res = append(res, response{
+			ID:    post.ID,
+			Title: post.Title,
+			Body:  post.Body,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"posts": res})
+}

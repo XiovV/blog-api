@@ -342,7 +342,7 @@ func (s *Server) confirmMfaHandler(c *gin.Context) {
 
 	encryptedSecret := s.encryptMfaSecret([]byte(request.Secret))
 
-	recoveryCodes := s.generateRecoveryCodes()
+	recoveryCodes := generateRecoveryCodes()
 
 	err := s.UserRepository.InsertMfaSecret(user.ID, encryptedSecret, recoveryCodes)
 	if err != nil {
@@ -354,7 +354,7 @@ func (s *Server) confirmMfaHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"recovery_codes": strings.Join(recoveryCodes, ", ")})
 }
 
-func (s *Server) getUserPosts(c *gin.Context) {
+func (s *Server) getPersonalPostsHandler(c *gin.Context) {
 	type response struct {
 		ID    int    `json:"id"`
 		Title string `json:"title"`

@@ -55,7 +55,7 @@ func (s *Server) Run() error {
 	{
 		usersAuth.POST("/mfa", s.setupMfaHandler)
 		usersAuth.POST("/mfa/confirm", s.confirmMfaHandler)
-		usersAuth.GET("/posts", s.getUserPosts)
+		usersAuth.GET("/posts", s.getPersonalPostsHandler)
 	}
 
 	postsAuth := v1.Group("/posts")
@@ -64,6 +64,7 @@ func (s *Server) Run() error {
 		postsAuth.POST("/", s.createPostHandler)
 		postsAuth.GET("/:postId", s.getPostHandler)
 		postsAuth.DELETE("/:postId", s.deletePostHandler)
+		postsAuth.GET("/user/:username", s.getUserPostsHandler)
 	}
 
 	s.Logger.Info("server listening...", zap.String("port", s.Config.Port), zap.String("env", s.Config.Environment))
