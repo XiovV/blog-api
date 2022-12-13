@@ -53,6 +53,18 @@ func (r *PostRepository) DeletePostByPostID(postId int) error {
 	return err
 }
 
+func (r *PostRepository) UpdatePost(post Post) error {
+	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
+	defer cancel()
+
+	_, err := r.db.ExecContext(ctx, "UPDATE post SET title = $1, body = $2 WHERE id = $3", post.Title, post.Body, post.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *PostRepository) FindByUserID(userId, page, limit int) ([]Post, error) {
 	var posts []Post
 

@@ -66,6 +66,7 @@ func (s *Server) Run() error {
 		postsAuth.GET("/:postId", s.getPostHandler)
 		postsAuth.DELETE("/:postId", s.deletePostHandler)
 		postsAuth.GET("/user/:username", s.getUserPostsHandler)
+		postsAuth.PUT("/:postId", s.editPostHandler)
 	}
 
 	s.Logger.Info("server listening...", zap.String("port", s.Config.Port), zap.String("env", s.Config.Environment))

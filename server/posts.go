@@ -174,3 +174,70 @@ func (s *Server) getUserPostsHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"posts": res})
 }
+
+func (s *Server) editPostHandler(c *gin.Context) {
+	user := s.getUserFromContext(c)
+
+	postId, err := strconv.Atoi(c.Param("postId"))
+	if err != nil {
+		s.Logger.Debug("postId not an integer", zap.Error(err))
+		s.badRequestResponse(c, "postId must be an integer")
+		return
+	}
+
+	post, err := s.PostRepository.FindPostByPostID(postId)
+	if err != nil {
+		s.Logger.Debug("couldn't find post", zap.Int("postId", postId))
+		c.JSON(http.StatusNotFound, gin.H{"error": "post could not be found"})
+		return
+	}
+
+	if post.UserID != user.ID {
+		ok := s.enforcePermissions(c, user.Role, "post", "write")
+		if !ok {
+			s.Logger.Debug("user has insufficient permissions", zap.String("username", user.Username))
+			c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+			return
+		}
+	}
+
+	var request struct {
+		Title *string `json:"title"`
+		Body  *string `json:"body"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		s.Logger.Debug("json is invalid", zap.Error(err))
+		s.invalidJSONResponse(c)
+		return
+	}
+
+	if request.Title != nil {
+		post.Title = *request.Title
+	}
+
+	if request.Body != nil {
+		post.Body = *request.Body
+	}
+
+	post.Title = strings.TrimSpace(post.Title)
+
+	v := validator.New()
+	v.RequiredMax("title", post.Title, maxTitleLenght)
+
+	ok, errors := v.IsValid()
+	if !ok {
+		s.Logger.Debug("input is invalid", zap.Strings("error", errors))
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors})
+		return
+	}
+
+	err = s.PostRepository.UpdatePost(post)
+	if err != nil {
+		s.Logger.Error("couldn't update post", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	s.successResponse(c, "post updated successfully")
+}
