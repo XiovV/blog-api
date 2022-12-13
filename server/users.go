@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"net/mail"
+	"strconv"
 	"strings"
 )
 
@@ -62,7 +63,7 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 
 	id, err := s.UserRepository.InsertUser(repository.User{Username: request.Username, Email: request.Email, Password: hash})
 	if err != nil {
-		s.Logger.Debug("couldn't insert user", zap.Error(err))
+		s.Logger.Debug("couldn't insert user", zap.Error(err), zap.String("username", request.Username))
 		s.badRequestResponse(c, "username or email are already taken")
 		return
 	}
@@ -386,4 +387,37 @@ func (s *Server) getPersonalPostsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"posts": res})
+}
+
+func (s *Server) deleteUserHandler(c *gin.Context) {
+	user := s.getUserFromContext(c)
+
+	ok, err := s.CasbinEnforcer.Enforce(user.Role, "user", "delete")
+	if err != nil {
+		s.Logger.Error("error enforcing rules", zap.Error(err), zap.String("username", user.Username))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	if !ok {
+		s.Logger.Debug("user has insufficient permissions", zap.String("username", user.Username), zap.String("role", user.Role))
+		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		return
+	}
+
+	userId, err := strconv.Atoi(c.Param("userId"))
+	if err != nil {
+		s.Logger.Debug("userId param not an integer", zap.Error(err), zap.String("userId", c.Param("userId")))
+		s.badRequestResponse(c, "userId must be an integer")
+		return
+	}
+
+	err = s.UserRepository.DeleteUserByID(userId)
+	if err != nil {
+		s.Logger.Error("couldn't delete user", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	c.Status(http.StatusOK)
 }

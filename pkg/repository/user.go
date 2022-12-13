@@ -13,6 +13,7 @@ const (
 	normalRole = iota + 1
 	moderatorRole
 	adminRole
+	defaultActiveState = true
 )
 
 type User struct {
@@ -22,6 +23,7 @@ type User struct {
 	Password  string
 	MFASecret []byte `db:"mfa_secret"`
 	Role      string
+	Active    bool
 }
 
 func NewUserRepository(db *sqlx.DB) *UserRepository {
@@ -31,12 +33,21 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 func (r *UserRepository) InsertUser(user User) (int, error) {
 	var id int
 
-	err := r.db.Get(&id, "INSERT INTO \"user\" (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id", user.Username, user.Email, user.Password, normalRole)
+	err := r.db.Get(&id, "INSERT INTO \"user\" (username, email, password, role, active) VALUES ($1, $2, $3, $4, $5) RETURNING id", user.Username, user.Email, user.Password, normalRole, defaultActiveState)
 	if err != nil {
 		return 0, err
 	}
 
 	return id, nil
+}
+
+func (r *UserRepository) DeleteUserByID(userId int) error {
+	_, err := r.db.Exec("DELETE FROM \"user\" WHERE id = $1", userId)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *UserRepository) InsertMfaSecret(userId int, secret []byte, recoveryCodes []string) error {
@@ -60,7 +71,7 @@ func (r *UserRepository) SetRecoveryCodes(userId int, recoveryCodes []string) er
 func (r *UserRepository) FindUserByID(id int) (User, error) {
 	var user User
 
-	err := r.db.Get(&user, "SELECT \"user\".id, username, email, password, mfa_secret, role.name as role FROM \"user\" INNER JOIN role ON \"user\".role = role.id WHERE \"user\".id = $1", id)
+	err := r.db.Get(&user, "SELECT \"user\".id, username, email, password, mfa_secret, active, role.name as role FROM \"user\" INNER JOIN role ON \"user\".role = role.id WHERE \"user\".id = $1", id)
 	if err != nil {
 		return User{}, err
 	}

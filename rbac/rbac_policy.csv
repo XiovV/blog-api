@@ -1,5 +1,10 @@
 p, post_admin, post, write
 p, post_admin, post, delete
 
+p, user_admin, user, create
+p, user_admin, user, write
+p, user_admin, user, delete
+
 g, admin, post_admin
+g, admin, user_admin
 g, moderator, post_admin
