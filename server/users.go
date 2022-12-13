@@ -392,13 +392,7 @@ func (s *Server) getPersonalPostsHandler(c *gin.Context) {
 func (s *Server) deleteUserHandler(c *gin.Context) {
 	user := s.getUserFromContext(c)
 
-	ok, err := s.CasbinEnforcer.Enforce(user.Role, "user", "delete")
-	if err != nil {
-		s.Logger.Error("error enforcing rules", zap.Error(err), zap.String("username", user.Username))
-		s.internalServerErrorResponse(c)
-		return
-	}
-
+	ok := s.enforcePermissions(c, user.Role, "user", "delete")
 	if !ok {
 		s.Logger.Debug("user has insufficient permissions", zap.String("username", user.Username), zap.String("role", user.Role))
 		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})

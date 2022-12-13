@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"math/rand"
 	"strconv"
 )
@@ -90,4 +91,15 @@ func (s *Server) isRecoveryCodeValid(recoveryCode string, codes []string) bool {
 	}
 
 	return false
+}
+
+func (s *Server) enforcePermissions(c *gin.Context, role, object, action string) bool {
+	ok, err := s.CasbinEnforcer.Enforce(role, "user", "delete")
+	if err != nil {
+		s.Logger.Debug("couldn't enforce rules", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return false
+	}
+
+	return ok
 }

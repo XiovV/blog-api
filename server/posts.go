@@ -115,13 +115,7 @@ func (s *Server) deletePostHandler(c *gin.Context) {
 	}
 
 	if post.UserID != user.ID {
-		ok, err := s.CasbinEnforcer.Enforce(user.Role, "post", "delete")
-		if err != nil {
-			s.Logger.Error("error enforcing rules", zap.Error(err), zap.String("username", user.Username))
-			s.internalServerErrorResponse(c)
-			return
-		}
-
+		ok := s.enforcePermissions(c, user.Role, "post", "delete")
 		if !ok {
 			s.Logger.Debug("user has insufficient permissions", zap.String("username", user.Username), zap.String("role", user.Role))
 			c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
