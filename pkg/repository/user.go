@@ -33,7 +33,10 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 func (r *UserRepository) InsertUser(user User) (int, error) {
 	var id int
 
-	err := r.db.Get(&id, "INSERT INTO \"user\" (username, email, password, role, active) VALUES ($1, $2, $3, $4, $5) RETURNING id", user.Username, user.Email, user.Password, normalRole, defaultActiveState)
+	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
+	defer cancel()
+
+	err := r.db.GetContext(ctx, &id, "INSERT INTO \"user\" (username, email, password, role, active) VALUES ($1, $2, $3, $4, $5) RETURNING id", user.Username, user.Email, user.Password, normalRole, defaultActiveState)
 	if err != nil {
 		return 0, err
 	}
@@ -42,7 +45,10 @@ func (r *UserRepository) InsertUser(user User) (int, error) {
 }
 
 func (r *UserRepository) DeleteUserByID(userId int) error {
-	_, err := r.db.Exec("DELETE FROM \"user\" WHERE id = $1", userId)
+	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
+	defer cancel()
+
+	_, err := r.db.ExecContext(ctx, "DELETE FROM \"user\" WHERE id = $1", userId)
 	if err != nil {
 		return err
 	}
@@ -51,7 +57,10 @@ func (r *UserRepository) DeleteUserByID(userId int) error {
 }
 
 func (r *UserRepository) InsertMfaSecret(userId int, secret []byte, recoveryCodes []string) error {
-	_, err := r.db.Exec("UPDATE \"user\" SET mfa_secret = $1, recovery = $2 WHERE id = $3", secret, pq.Array(recoveryCodes), userId)
+	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
+	defer cancel()
+
+	_, err := r.db.ExecContext(ctx, "UPDATE \"user\" SET mfa_secret = $1, recovery = $2 WHERE id = $3", secret, pq.Array(recoveryCodes), userId)
 	if err != nil {
 		return err
 	}
@@ -60,7 +69,10 @@ func (r *UserRepository) InsertMfaSecret(userId int, secret []byte, recoveryCode
 }
 
 func (r *UserRepository) SetRecoveryCodes(userId int, recoveryCodes []string) error {
-	_, err := r.db.Exec("UPDATE \"user\" SET recovery = $1 WHERE id = $2", pq.Array(recoveryCodes), userId)
+	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
+	defer cancel()
+
+	_, err := r.db.ExecContext(ctx, "UPDATE \"user\" SET recovery = $1 WHERE id = $2", pq.Array(recoveryCodes), userId)
 	if err != nil {
 		return err
 	}
@@ -71,7 +83,10 @@ func (r *UserRepository) SetRecoveryCodes(userId int, recoveryCodes []string) er
 func (r *UserRepository) FindUserByID(id int) (User, error) {
 	var user User
 
-	err := r.db.Get(&user, "SELECT \"user\".id, username, email, password, mfa_secret, active, role.name as role FROM \"user\" INNER JOIN role ON \"user\".role = role.id WHERE \"user\".id = $1", id)
+	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
+	defer cancel()
+
+	err := r.db.GetContext(ctx, &user, "SELECT \"user\".id, username, email, password, mfa_secret, active, role.name as role FROM \"user\" INNER JOIN role ON \"user\".role = role.id WHERE \"user\".id = $1", id)
 	if err != nil {
 		return User{}, err
 	}
@@ -82,7 +97,10 @@ func (r *UserRepository) FindUserByID(id int) (User, error) {
 func (r *UserRepository) FindUserByUsername(username string) (User, error) {
 	var user User
 
-	err := r.db.Get(&user, "SELECT \"user\".id, username, email, password, mfa_secret FROM \"user\" WHERE username = $1", username)
+	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
+	defer cancel()
+
+	err := r.db.GetContext(ctx, &user, "SELECT \"user\".id, username, email, password, mfa_secret FROM \"user\" WHERE username = $1", username)
 	if err != nil {
 		return User{}, err
 	}
@@ -93,7 +111,10 @@ func (r *UserRepository) FindUserByUsername(username string) (User, error) {
 func (r *UserRepository) GetUserRecoveryCodes(username string) ([]string, error) {
 	var recoveryCodes []string
 
-	row := r.db.QueryRowx("SELECT recovery FROM \"user\" WHERE username = $1", username)
+	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
+	defer cancel()
+
+	row := r.db.QueryRowxContext(ctx, "SELECT recovery FROM \"user\" WHERE username = $1", username)
 	err := row.Scan(pq.Array(&recoveryCodes))
 	if err != nil {
 		return nil, err

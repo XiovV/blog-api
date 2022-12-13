@@ -48,3 +48,7 @@ func NewPostgres(dsn string) (*sqlx.DB, error) {
 func calculateOffset(page, limit int) int {
 	return (page - 1) * limit
 }
+
+func newBackgroundContext(duration int) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), time.Duration(duration)*time.Second)
+}
