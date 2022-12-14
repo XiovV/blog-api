@@ -68,14 +68,21 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := generateToken(id)
+	accessToken, err := generateAccessToken(id)
 	if err != nil {
-		s.Logger.Error("couldn't generate token", zap.Error(err))
+		s.Logger.Error("couldn't generate accessToken", zap.Error(err))
 		s.internalServerErrorResponse(c)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"jwt": token})
+	refreshToken, err := generateRefreshToken(id)
+	if err != nil {
+		s.Logger.Error("couldn't generate refreshToken", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"access_token": accessToken, "refresh_token": refreshToken})
 }
 
 func (s *Server) loginUserHandler(c *gin.Context) {
@@ -130,14 +137,21 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := generateToken(user.ID)
+	accessToken, err := generateAccessToken(user.ID)
 	if err != nil {
-		s.Logger.Error("couldn't generate token", zap.Error(err))
+		s.Logger.Error("couldn't generate accessToken", zap.Error(err))
 		s.internalServerErrorResponse(c)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"jwt": token})
+	refreshToken, err := generateRefreshToken(user.ID)
+	if err != nil {
+		s.Logger.Error("couldn't generate refreshToken", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"access_token": accessToken, "refresh_token": refreshToken})
 }
 
 func (s *Server) loginUserMfaHandler(c *gin.Context) {
@@ -206,7 +220,7 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := generateToken(user.ID)
+	token, err := generateAccessToken(user.ID)
 	if err != nil {
 		s.Logger.Error("couldn't generate token", zap.Error(err))
 		s.internalServerErrorResponse(c)
@@ -285,7 +299,7 @@ func (s *Server) loginUserRecoveryHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := generateToken(user.ID)
+	token, err := generateAccessToken(user.ID)
 	if err != nil {
 		s.Logger.Error("couldn't generate token", zap.Error(err))
 		s.internalServerErrorResponse(c)
@@ -414,4 +428,87 @@ func (s *Server) deleteUserHandler(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+func (s *Server) refreshTokenHandler(c *gin.Context) {
+	authToken, err := s.validateAuthorizationHeader(c)
+	if err != nil {
+		s.Logger.Debug("authorization header validation error", zap.Error(err))
+		c.JSON(http.StatusForbidden, gin.H{"error": err})
+		return
+	}
+
+	token, err := parseToken(authToken)
+	if err != nil {
+		s.Logger.Debug("invalid token", zap.Error(err))
+		c.JSON(http.StatusForbidden, gin.H{"error": "invalid token"})
+		return
+	}
+
+	var request struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	if err = c.ShouldBindJSON(&request); err != nil {
+		s.Logger.Debug("json is invalid", zap.Error(err))
+		s.invalidJSONResponse(c)
+		return
+	}
+
+	_, err = validateRefreshToken(request.RefreshToken)
+	if err != nil {
+		s.Logger.Debug("invalid refresh token", zap.Error(err))
+		c.JSON(http.StatusForbidden, gin.H{"error": "invalid refresh token"})
+		return
+	}
+
+	//TODO: verify if the refresh token is for the correct user
+	userId := getClaimInt(token, "id")
+
+	isTokenBlacklisted, err := s.UserRepository.IsRefreshTokenBlacklisted(userId, request.RefreshToken)
+	if err != nil {
+		s.Logger.Error("isTokenBlacklisted error", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	if isTokenBlacklisted {
+		s.Logger.Warn("token is blacklisted", zap.Int("userId", userId))
+		err = s.UserRepository.SetActiveState(userId, false)
+		if err != nil {
+			s.Logger.Error("couldn't disable user's account", zap.Error(err))
+			s.internalServerErrorResponse(c)
+			return
+		}
+
+		c.Status(http.StatusForbidden)
+		return
+	}
+
+	newAccessToken, err := generateAccessToken(userId)
+	if err != nil {
+		s.Logger.Error("couldn't generate newAccessToken", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	newRefreshToken, err := generateRefreshToken(userId)
+	if err != nil {
+		s.Logger.Error("couldn't generate newRefreshToken", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	err = s.UserRepository.InsertRefreshToken(repository.Token{
+		UserID: userId,
+		Token:  request.RefreshToken,
+	})
+
+	if err != nil {
+		s.Logger.Error("couldn't insert refresh token", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"access_token": newAccessToken, "refresh_token": newRefreshToken})
 }

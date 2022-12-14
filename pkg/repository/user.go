@@ -80,6 +80,18 @@ func (r *UserRepository) SetRecoveryCodes(userId int, recoveryCodes []string) er
 	return nil
 }
 
+func (r *UserRepository) SetActiveState(userId int, active bool) error {
+	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
+	defer cancel()
+
+	_, err := r.db.ExecContext(ctx, "UPDATE \"user\" SET active = $1 WHERE id = $2", active, userId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *UserRepository) FindUserByID(id int) (User, error) {
 	var user User
 

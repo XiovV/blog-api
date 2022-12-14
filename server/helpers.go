@@ -1,11 +1,13 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"math/rand"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -61,6 +63,26 @@ func generateRecoveryCodes() []string {
 	}
 
 	return codes
+}
+
+func (s *Server) validateAuthorizationHeader(c *gin.Context) (string, error) {
+	tokenHeader := c.GetHeader("Authorization")
+
+	if len(tokenHeader) == 0 {
+		return "", errors.New("did not receive Authorization header")
+	}
+
+	authorizationHeaderSplit := strings.Split(tokenHeader, " ")
+	if len(authorizationHeaderSplit) != 2 {
+		return "", errors.New("wrong Authorization header format")
+	}
+
+	if authorizationHeaderSplit[0] != "Bearer" {
+
+		return "", errors.New("wrong Authorization header format")
+	}
+
+	return authorizationHeaderSplit[1], nil
 }
 
 func randomString() string {

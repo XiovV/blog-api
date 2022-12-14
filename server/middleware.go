@@ -4,32 +4,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
-	"strings"
 )
 
 func (s *Server) userAuth(c *gin.Context) {
-	tokenHeader := c.GetHeader("Authorization")
-
-	if len(tokenHeader) == 0 {
-		s.Logger.Debug("did not receive Authorization header")
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "did not receive Authorization header"})
+	authToken, err := s.validateAuthorizationHeader(c)
+	if err != nil {
+		s.Logger.Debug("authorization header validation error", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": err})
 		return
 	}
-
-	authorizationHeaderSplit := strings.Split(tokenHeader, " ")
-	if len(authorizationHeaderSplit) != 2 {
-		s.Logger.Debug("wrong Authorization header format")
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "wrong Authorization header format"})
-		return
-	}
-
-	if authorizationHeaderSplit[0] != "Bearer" {
-		s.Logger.Debug("wrong Authorization header format, missing keyword Bearer")
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "wrong Authorization header format"})
-		return
-	}
-
-	authToken := authorizationHeaderSplit[1]
 
 	token, err := validateToken(authToken)
 	if err != nil {
@@ -38,7 +21,7 @@ func (s *Server) userAuth(c *gin.Context) {
 		return
 	}
 
-	userId := getClaimInt(token, "ID")
+	userId := getClaimInt(token, "id")
 
 	user, err := s.UserRepository.FindUserByID(userId)
 	if err != nil {
