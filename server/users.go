@@ -18,6 +18,14 @@ const (
 	totpCodeLength   = 6
 )
 
+var argon2Params = argon2id.Params{
+	Memory:      128 * 1024,
+	Iterations:  10,
+	Parallelism: 4,
+	SaltLength:  16,
+	KeyLength:   32,
+}
+
 func (s *Server) registerUserHandler(c *gin.Context) {
 	var request struct {
 		Username string `json:"username"`
@@ -53,13 +61,12 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		return
 	}
 
-	hash, err := argon2id.CreateHash(request.Password, &argon2id.Params{
-		Memory:      128 * 1024,
-		Iterations:  10,
-		Parallelism: 4,
-		SaltLength:  16,
-		KeyLength:   32,
-	})
+	hash, err := argon2id.CreateHash(request.Password, &argon2Params)
+	if err != nil {
+		s.Logger.Error("couldn't hash password", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
 
 	id, err := s.UserRepository.InsertUser(repository.User{Username: request.Username, Email: request.Email, Password: hash})
 	if err != nil {
@@ -462,7 +469,6 @@ func (s *Server) refreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	//TODO: verify if the refresh token is for the correct user
 	userId := getClaimInt(token, "id")
 
 	isTokenBlacklisted, err := s.UserRepository.IsRefreshTokenBlacklisted(userId, request.RefreshToken)
