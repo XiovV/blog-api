@@ -14,14 +14,14 @@ func (s *Server) userAuth(c *gin.Context) {
 		return
 	}
 
-	token, err := validateToken(authToken)
+	token, err := validateAccessToken(authToken)
 	if err != nil {
 		s.Logger.Debug("invalid token", zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "invalid token"})
 		return
 	}
 
-	userId := getClaimInt(token, "id")
+	userId := token.ID
 
 	user, err := s.UserRepository.FindUserByID(userId)
 	if err != nil {

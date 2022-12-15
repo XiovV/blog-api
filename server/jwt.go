@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"fmt"
 	"github.com/golang-jwt/jwt/v4"
 	"os"
 	"time"
@@ -50,35 +49,20 @@ func generateRefreshToken(id int) (string, error) {
 	return ss, err
 }
 
-func parseToken(tok string) (*jwt.Token, error) {
-	token, _ := jwt.Parse(tok, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("couldn't verify signing method")
-		}
-
+func parseToken(tok string) (*tokenClaims, error) {
+	token, _ := jwt.ParseWithClaims(tok, &tokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("SIGNING_KEY")), nil
 	})
 
-	return token, nil
-}
-
-func validateToken(tok string) (*jwt.Token, error) {
-	token, err := jwt.Parse(tok, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("couldn't verify signing method")
-		}
-
-		return []byte(os.Getenv("SIGNING_KEY")), nil
-	})
-
-	if err != nil {
-		return nil, err
+	claims, ok := token.Claims.(*tokenClaims)
+	if !ok {
+		return nil, errors.New("claims invalid")
 	}
 
-	return token, nil
+	return claims, nil
 }
 
-func validateRefreshToken(tok string) (*jwt.Token, error) {
+func validateAccessToken(tok string) (*tokenClaims, error) {
 	token, err := jwt.ParseWithClaims(tok, &tokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("SIGNING_KEY")), nil
 	})
@@ -87,13 +71,33 @@ func validateRefreshToken(tok string) (*jwt.Token, error) {
 		return nil, err
 	}
 
-	if claims, ok := token.Claims.(*tokenClaims); ok {
-		if claims.Type != RefreshTokenType {
-			return nil, errors.New("token is not a refresh token")
-		}
+	claims, ok := token.Claims.(*tokenClaims)
+	if !ok {
+		return nil, errors.New("claims invalid")
 	}
 
-	return token, nil
+	return claims, nil
+}
+
+func validateRefreshToken(tok string) (*tokenClaims, error) {
+	token, err := jwt.ParseWithClaims(tok, &tokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("SIGNING_KEY")), nil
+	})
+
+	if !token.Valid {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*tokenClaims)
+	if !ok {
+		return nil, errors.New("invalid token")
+	}
+
+	if claims.Type != RefreshTokenType {
+		return nil, errors.New("token is not a refresh token")
+	}
+
+	return claims, nil
 }
 
 func getClaimString(token *jwt.Token, claim string) string {

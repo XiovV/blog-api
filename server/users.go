@@ -445,10 +445,10 @@ func (s *Server) refreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := parseToken(authToken)
+	accessToken, err := parseToken(authToken)
 	if err != nil {
-		s.Logger.Debug("invalid token", zap.Error(err))
-		c.JSON(http.StatusForbidden, gin.H{"error": "invalid token"})
+		s.Logger.Debug("invalid accessToken", zap.Error(err))
+		c.JSON(http.StatusForbidden, gin.H{"error": "invalid accessToken"})
 		return
 	}
 
@@ -462,14 +462,20 @@ func (s *Server) refreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	_, err = validateRefreshToken(request.RefreshToken)
+	refreshToken, err := validateRefreshToken(request.RefreshToken)
 	if err != nil {
 		s.Logger.Debug("invalid refresh token", zap.Error(err))
 		c.JSON(http.StatusForbidden, gin.H{"error": "invalid refresh token"})
 		return
 	}
 
-	userId := getClaimInt(token, "id")
+	userId := accessToken.ID
+
+	if userId != refreshToken.ID {
+		s.Logger.Warn("refresh token used for the wrong user", zap.Int("expected", userId), zap.Int("got", refreshToken.ID))
+		c.JSON(http.StatusForbidden, gin.H{"error": "refresh token used for the wrong user"})
+		return
+	}
 
 	isTokenBlacklisted, err := s.UserRepository.IsRefreshTokenBlacklisted(userId, request.RefreshToken)
 	if err != nil {
@@ -479,7 +485,7 @@ func (s *Server) refreshTokenHandler(c *gin.Context) {
 	}
 
 	if isTokenBlacklisted {
-		s.Logger.Warn("token is blacklisted", zap.Int("userId", userId))
+		s.Logger.Warn("accessToken is blacklisted", zap.Int("userId", userId))
 		err = s.UserRepository.SetActiveState(userId, false)
 		if err != nil {
 			s.Logger.Error("couldn't disable user's account", zap.Error(err))
@@ -511,7 +517,7 @@ func (s *Server) refreshTokenHandler(c *gin.Context) {
 	})
 
 	if err != nil {
-		s.Logger.Error("couldn't insert refresh token", zap.Error(err))
+		s.Logger.Error("couldn't insert refresh accessToken", zap.Error(err))
 		s.internalServerErrorResponse(c)
 		return
 	}
