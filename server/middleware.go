@@ -1,10 +1,36 @@
 package server
 
 import (
+	"errors"
+	"github.com/XiovV/blog-api/pkg/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
 )
+
+func (s *Server) errorHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+
+		err := c.Errors.Last()
+
+		if err != nil {
+			var errInvalidInput ErrInvalidInput
+
+			switch {
+			case errors.Is(err, repository.ErrUserAlreadyExists):
+				c.JSON(http.StatusConflict, gin.H{"error": "a user with this username or email already exists"})
+			case errors.Is(err, ErrInvalidJSON):
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"})
+			case errors.As(err, &errInvalidInput):
+				c.JSON(http.StatusBadRequest, gin.H{"error": errInvalidInput.Message})
+			default:
+				s.internalServerErrorResponse(c)
+			}
+		}
+
+	}
+}
 
 func (s *Server) userAuth(c *gin.Context) {
 	authToken, err := s.validateAuthorizationHeader(c)

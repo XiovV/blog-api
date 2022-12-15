@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"time"
@@ -12,6 +13,10 @@ const (
 	MaxIdleConns        = 25
 	MaxIdleTime         = "15m"
 	DefaultQueryTimeout = 5
+)
+
+var (
+	ErrUserAlreadyExists = errors.New("username or email are already taken")
 )
 
 type Postgres struct {

@@ -35,7 +35,7 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
-		s.invalidJSONResponse(c)
+		c.Error(ErrInvalidJSON)
 		return
 	}
 
@@ -71,7 +71,7 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	id, err := s.UserRepository.InsertUser(repository.User{Username: request.Username, Email: request.Email, Password: hash})
 	if err != nil {
 		s.Logger.Debug("couldn't insert user", zap.Error(err), zap.String("username", request.Username))
-		s.badRequestResponse(c, "username or email are already taken")
+		c.Error(err)
 		return
 	}
 
@@ -100,7 +100,7 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
-		s.invalidJSONResponse(c)
+		c.Error(ErrInvalidJSON)
 		return
 	}
 
@@ -170,7 +170,7 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
-		s.invalidJSONResponse(c)
+		c.Error(ErrInvalidJSON)
 		return
 	}
 
@@ -223,7 +223,7 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 	ok = totp.Validate(request.TOTP, string(secret))
 	if !ok {
 		s.Logger.Debug("invalid totp code", zap.String("totp", request.TOTP))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid totp code"})
+		c.Error(ErrInvalidInput{"invalid totp code"})
 		return
 	}
 
@@ -246,7 +246,7 @@ func (s *Server) loginUserRecoveryHandler(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
-		s.invalidJSONResponse(c)
+		c.Error(ErrInvalidJSON)
 		return
 	}
 
@@ -340,7 +340,7 @@ func (s *Server) confirmMfaHandler(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
-		s.invalidJSONResponse(c)
+		c.Error(ErrInvalidJSON)
 		return
 	}
 
@@ -358,7 +358,7 @@ func (s *Server) confirmMfaHandler(c *gin.Context) {
 	ok = totp.Validate(request.TOTP, request.Secret)
 	if !ok {
 		s.Logger.Debug("invalid totp code", zap.String("totp", request.TOTP))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid totp code"})
+		c.Error(ErrInvalidInput{"invalid totp code"})
 		return
 	}
 
@@ -386,7 +386,7 @@ func (s *Server) getPersonalPostsHandler(c *gin.Context) {
 	page, limit, err := s.validatePageAndLimit(c)
 	if err != nil {
 		s.Logger.Debug("invalid page and limit", zap.Error(err), zap.String("page", c.Query("page")), zap.String("limit", c.Query("limit")))
-		s.badRequestResponse(c, err.Error())
+		c.Error(ErrInvalidInput{err.Error()})
 		return
 	}
 
@@ -458,7 +458,7 @@ func (s *Server) refreshTokenHandler(c *gin.Context) {
 
 	if err = c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
-		s.invalidJSONResponse(c)
+		c.Error(ErrInvalidJSON)
 		return
 	}
 

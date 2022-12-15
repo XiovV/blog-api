@@ -38,7 +38,7 @@ func (s *Server) Run() error {
 	}
 
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery(), s.CORS())
+	router.Use(gin.Logger(), gin.Recovery(), s.CORS(), s.errorHandler())
 
 	v1 := router.Group("/v1")
 

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
@@ -38,6 +39,13 @@ func (r *UserRepository) InsertUser(user User) (int, error) {
 
 	err := r.db.GetContext(ctx, &id, "INSERT INTO \"user\" (username, email, password, role, active) VALUES ($1, $2, $3, $4, $5) RETURNING id", user.Username, user.Email, user.Password, normalRole, defaultActiveState)
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			if pqErr.Code.Name() == "unique_violation" {
+				return 0, ErrUserAlreadyExists
+			}
+		}
+
 		return 0, err
 	}
 
