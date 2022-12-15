@@ -30,7 +30,7 @@ func (s *Server) createPostHandler(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
-		s.invalidJSONResponse(c)
+		c.Error(ErrInvalidJSON)
 		return
 	}
 
@@ -208,7 +208,7 @@ func (s *Server) editPostHandler(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
-		s.invalidJSONResponse(c)
+		c.Error(ErrInvalidJSON)
 		return
 	}
 
