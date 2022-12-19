@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
@@ -17,7 +16,6 @@ func New() (*Config, error) {
 
 	err := cleanenv.ReadEnv(&cfg)
 	if err != nil {
-		fmt.Println("err", err)
 		return nil, err
 	}
 
