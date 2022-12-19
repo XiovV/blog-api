@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"github.com/XiovV/blog-api/pkg/repository"
 	"github.com/XiovV/blog-api/pkg/validator"
 	"github.com/alexedwards/argon2id"
@@ -27,11 +28,38 @@ var argon2Params = argon2id.Params{
 }
 
 func (s *Server) registerUserHandler(c *gin.Context) {
-	var request struct {
+	// swagger:operation POST /users/register registerUser
+	//
+	// Registers a user
+	//
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	//   - name: Body
+	//     in: body
+	//     schema:
+	//       "$ref": "#/definitions/registerRequest"
+	// responses:
+	//   '200':
+	//     description: register response
+	//     schema:
+	//       "$ref": "#/definitions/registerResponse"
+
+	var t string
+	fmt.Println(t)
+
+	// swagger:model
+	type registerRequest struct {
+		// Username from this user
 		Username string `json:"username"`
-		Email    string `json:"email"`
+		// Email from this user
+		Email string `json:"email"`
+		// Email from this user
 		Password string `json:"password"`
 	}
+
+	var request registerRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
@@ -89,7 +117,15 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"access_token": accessToken, "refresh_token": refreshToken})
+	// swagger:model
+	type registerResponse struct {
+		// user's access token
+		AccessToken string `json:"access_token"`
+		// user's refresh token
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	c.JSON(http.StatusOK, registerResponse{accessToken, refreshToken})
 }
 
 func (s *Server) loginUserHandler(c *gin.Context) {

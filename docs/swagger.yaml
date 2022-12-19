@@ -1,0 +1,59 @@
+basePath: /v1
+consumes:
+    - application/json
+definitions:
+    registerRequest:
+        properties:
+            email:
+                description: Email from this user
+                type: string
+                x-go-name: Email
+            password:
+                description: Email from this user
+                type: string
+                x-go-name: Password
+            username:
+                description: Username from this user
+                type: string
+                x-go-name: Username
+        type: object
+        x-go-package: github.com/XiovV/blog-api/server
+    registerResponse:
+        properties:
+            access_token:
+                description: user's access token
+                type: string
+                x-go-name: AccessToken
+            refresh_token:
+                description: user's refresh token
+                type: string
+                x-go-name: RefreshToken
+        type: object
+        x-go-package: github.com/XiovV/blog-api/server
+host: localhost
+info:
+    description: The purpose of this application is to provide an application
+    title: defines the blog api.
+    version: 0.0.1
+paths:
+    /users/register:
+        post:
+            description: Registers a user
+            operationId: registerUser
+            parameters:
+                - in: body
+                  name: Body
+                  schema:
+                    $ref: '#/definitions/registerRequest'
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: register response
+                    schema:
+                        $ref: '#/definitions/registerResponse'
+produces:
+    - application/json
+schemes:
+    - https
+swagger: "2.0"
