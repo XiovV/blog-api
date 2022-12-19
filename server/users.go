@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"github.com/XiovV/blog-api/pkg/repository"
 	"github.com/XiovV/blog-api/pkg/validator"
 	"github.com/alexedwards/argon2id"
@@ -46,9 +45,6 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	//     schema:
 	//       "$ref": "#/definitions/registerResponse"
 
-	var t string
-	fmt.Println(t)
-
 	// swagger:model
 	type registerRequest struct {
 		// Username from this user
@@ -60,7 +56,6 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	}
 
 	var request registerRequest
-
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
 		c.Error(ErrInvalidJSON)
