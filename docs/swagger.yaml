@@ -5,17 +5,23 @@ definitions:
     registerRequest:
         properties:
             email:
-                description: Email from this user
+                description: Email for this user
                 type: string
                 x-go-name: Email
             password:
-                description: Email from this user
+                description: Password for this user
+                minLength: 8
                 type: string
                 x-go-name: Password
             username:
-                description: Username from this user
+                description: Username for this user
+                maxLength: 50
+                minLength: 3
                 type: string
                 x-go-name: Username
+        required:
+            - username
+            - email
         type: object
         x-go-package: github.com/XiovV/blog-api/server
     registerResponse:

@@ -47,11 +47,16 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 
 	// swagger:model
 	type registerRequest struct {
-		// Username from this user
+		// Username for this user
+		// required: true
+		// min length: 3
+		// max length: 50
 		Username string `json:"username"`
-		// Email from this user
+		// Email for this user
+		// required: true
 		Email string `json:"email"`
-		// Email from this user
+		// Password for this user
+		// min length: 8
 		Password string `json:"password"`
 	}
 
