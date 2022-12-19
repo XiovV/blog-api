@@ -141,11 +141,45 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 }
 
 func (s *Server) loginUserHandler(c *gin.Context) {
-	var request struct {
+	// swagger:operation POST /users/login loginUser
+	//
+	// Returns access and refresh tokens
+	//
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	//   - name: Body
+	//     in: body
+	//     schema:
+	//       "$ref": "#/definitions/loginRequest"
+	// responses:
+	//   '200':
+	//     description: user successfully logged in
+	//     schema:
+	//       "$ref": "#/definitions/loginResponse"
+	//   '400':
+	//     description: client error
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '500':
+	//     description: internal server error
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+
+	// swagger:model
+	type loginRequest struct {
+		// Username for this user
+		// required: true
+		// min length: 3
+		// max length: 50
 		Username string `json:"username"`
+		// Password for this user
+		// min length: 8
 		Password string `json:"password"`
 	}
 
+	var request loginRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
 		c.Error(ErrInvalidJSON)
@@ -156,7 +190,7 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 
 	v := validator.New()
 
-	v.RequiredMax("username", request.Username, 50)
+	v.RequiredRange("username", request.Username, 3, 50)
 	v.RequiredMin("password", request.Password, 8)
 
 	ok, errors := v.IsValid()
@@ -206,7 +240,15 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"access_token": accessToken, "refresh_token": refreshToken})
+	// swagger:model
+	type loginResponse struct {
+		// user's access token
+		AccessToken string `json:"access_token"`
+		// user's refresh token
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	c.JSON(http.StatusOK, loginResponse{accessToken, refreshToken})
 }
 
 func (s *Server) loginUserMfaHandler(c *gin.Context) {
@@ -275,14 +317,29 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := generateAccessToken(user.ID)
+	accessToken, err := generateAccessToken(user.ID)
 	if err != nil {
 		s.Logger.Error("couldn't generate token", zap.Error(err))
 		s.internalServerErrorResponse(c)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"jwt": token})
+	refreshToken, err := generateRefreshToken(user.ID)
+	if err != nil {
+		s.Logger.Error("couldn't generate refreshToken", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
+
+	// swagger:model
+	type loginMfaResponse struct {
+		// user's access token
+		AccessToken string `json:"access_token"`
+		// user's refresh token
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	c.JSON(http.StatusOK, loginMfaResponse{accessToken, refreshToken})
 }
 
 func (s *Server) loginUserRecoveryHandler(c *gin.Context) {

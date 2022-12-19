@@ -10,6 +10,47 @@ definitions:
                 x-go-name: Error
         type: object
         x-go-package: github.com/XiovV/blog-api/server
+    loginMfaResponse:
+        properties:
+            access_token:
+                description: user's access token
+                type: string
+                x-go-name: AccessToken
+            refresh_token:
+                description: user's refresh token
+                type: string
+                x-go-name: RefreshToken
+        type: object
+        x-go-package: github.com/XiovV/blog-api/server
+    loginRequest:
+        properties:
+            password:
+                description: Password for this user
+                minLength: 8
+                type: string
+                x-go-name: Password
+            username:
+                description: Username for this user
+                maxLength: 50
+                minLength: 3
+                type: string
+                x-go-name: Username
+        required:
+            - username
+        type: object
+        x-go-package: github.com/XiovV/blog-api/server
+    loginResponse:
+        properties:
+            access_token:
+                description: user's access token
+                type: string
+                x-go-name: AccessToken
+            refresh_token:
+                description: user's refresh token
+                type: string
+                x-go-name: RefreshToken
+        type: object
+        x-go-package: github.com/XiovV/blog-api/server
     registerRequest:
         properties:
             email:
@@ -50,6 +91,30 @@ info:
     title: defines the blog api.
     version: 0.0.1
 paths:
+    /users/login:
+        post:
+            description: Returns access and refresh tokens
+            operationId: loginUser
+            parameters:
+                - in: body
+                  name: Body
+                  schema:
+                    $ref: '#/definitions/loginRequest'
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: user successfully logged in
+                    schema:
+                        $ref: '#/definitions/loginResponse'
+                "400":
+                    description: client error
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+                "500":
+                    description: internal server error
+                    schema:
+                        $ref: '#/definitions/errorResponse'
     /users/register:
         post:
             description: Registers a user
