@@ -2,6 +2,14 @@ basePath: /v1
 consumes:
     - application/json
 definitions:
+    errorResponse:
+        properties:
+            error:
+                description: Error response model
+                type: string
+                x-go-name: Error
+        type: object
+        x-go-package: github.com/XiovV/blog-api/server
     registerRequest:
         properties:
             email:
@@ -55,9 +63,21 @@ paths:
                 - application/json
             responses:
                 "200":
-                    description: register response
+                    description: user successfully registered
                     schema:
                         $ref: '#/definitions/registerResponse'
+                "400":
+                    description: client error
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+                "409":
+                    description: user already exists
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+                "500":
+                    description: internal server error
+                    schema:
+                        $ref: '#/definitions/errorResponse'
 produces:
     - application/json
 schemes:

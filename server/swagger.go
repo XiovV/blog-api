@@ -15,3 +15,9 @@
 //
 // swagger:meta
 package server
+
+// swagger:model
+type errorResponse struct {
+	// Error response model
+	Error string `json:"error"`
+}

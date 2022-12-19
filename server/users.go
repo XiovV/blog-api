@@ -41,9 +41,21 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	//       "$ref": "#/definitions/registerRequest"
 	// responses:
 	//   '200':
-	//     description: register response
+	//     description: user successfully registered
 	//     schema:
 	//       "$ref": "#/definitions/registerResponse"
+	//   '400':
+	//     description: client error
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '409':
+	//     description: user already exists
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '500':
+	//     description: internal server error
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
 
 	// swagger:model
 	type registerRequest struct {
