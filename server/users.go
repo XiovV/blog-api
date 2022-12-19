@@ -72,7 +72,7 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 
 	v := validator.New()
 
-	v.RequiredMax("username", request.Username, 50)
+	v.RequiredRange("username", request.Username, 3, 50)
 	v.RequiredMin("password", request.Password, 8)
 
 	ok, errors := v.IsValid()
