@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	maxTitleLenght = 256
+	maxTitleLength = 256
 )
 
 func (s *Server) createPostHandler(c *gin.Context) {
@@ -37,7 +37,7 @@ func (s *Server) createPostHandler(c *gin.Context) {
 	request.Title = strings.TrimSpace(request.Title)
 
 	v := validator.New()
-	v.RequiredMax("title", request.Title, maxTitleLenght)
+	v.RequiredMax("title", request.Title, maxTitleLength)
 
 	ok, errors := v.IsValid()
 	if !ok {
@@ -223,7 +223,7 @@ func (s *Server) editPostHandler(c *gin.Context) {
 	post.Title = strings.TrimSpace(post.Title)
 
 	v := validator.New()
-	v.RequiredMax("title", post.Title, maxTitleLenght)
+	v.RequiredMax("title", post.Title, maxTitleLength)
 
 	ok, errors := v.IsValid()
 	if !ok {
