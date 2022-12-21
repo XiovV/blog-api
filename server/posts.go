@@ -14,49 +14,29 @@ const (
 	maxTitleLength = 256
 )
 
+type createPostRequest struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}
+
+type createPostResponse struct {
+	ID    int    `json:"id"`
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}
+
+// @Summary Creates a post
+// @Tags post
+// @Accept json
+// @Produce json
+// @Param request body createPostRequest true "Create post body"
+// @Success 200 {object} createPostResponse
+// @Failure 400 {object} errorResponse "Input is invalid"
+// @Failure 403 {object} errorResponse "The access token is invalid"
+// @Failure 500 {object} errorResponse
+// @Router /posts/ [post]
 func (s *Server) createPostHandler(c *gin.Context) {
-	// swagger:operation POST /posts post createPost
-	//
-	// Creates a post and returns the created post.
-	//
-	// ---
-	// produces:
-	// - application/json
-	// parameters:
-	//   - name: access_token
-	//     in: header
-	//     required: true
-	//     type: string
-	//   - name: post id
-	//     in: query
-	//     required: false
-	//     type: integer
-	//     format: int32
-	// responses:
-	//   '200':
-	//     description: The requested post is returned.
-	//     schema:
-	//       "$ref": "#/definitions/createPostResponse"
-	//   '400':
-	//     description: Input is invalid.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-	//   '403':
-	//     description: The access token is invalid.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-	//   '500':
-	//     description: Internal server error.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-
 	user := s.getUserFromContext(c)
-
-	//swagger:model
-	type createPostRequest struct {
-		Title string `json:"title"`
-		Body  string `json:"body"`
-	}
 
 	var request createPostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -90,13 +70,6 @@ func (s *Server) createPostHandler(c *gin.Context) {
 		return
 	}
 
-	//swagger:model
-	type createPostResponse struct {
-		ID    int    `json:"id"`
-		Title string `json:"title"`
-		Body  string `json:"body"`
-	}
-
 	response := createPostResponse{
 		ID:    newPost.ID,
 		Title: newPost.Title,
@@ -106,35 +79,25 @@ func (s *Server) createPostHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func (s *Server) getPostHandler(c *gin.Context) {
-	// swagger:operation POST /users/login/recovery user loginUserRecovery
-	//
-	// Checks if the login credentials and recovery code are correct and returns the access and refresh tokens.
-	//
-	// ---
-	// produces:
-	// - application/json
-	// parameters:
-	//   - name: Body
-	//     in: body
-	//     schema:
-	//       "$ref": "#/definitions/recoveryLoginRequest"
-	// security:
-	//   - access_token: []
-	// responses:
-	//   '200':
-	//     description: User successfully logged in.
-	//     schema:
-	//       "$ref": "#/definitions/tokenPair"
-	//   '400':
-	//     description: Input is either invalid, or the provided recovery code is incorrect.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-	//   '500':
-	//     description: Internal server error.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
+// TODO: add author info here
+type getPostResponse struct {
+	ID    int    `json:"id"`
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}
 
+// @Summary Gets a post
+// @Tags post
+// @Accept json
+// @Produce json
+// @Param postId path int true "post id"
+// @Success 200 {object} getPostResponse
+// @Failure 400 {object} errorResponse "Input is invalid"
+// @Failure 403 {object} errorResponse "The access token is invalid"
+// @Failure 404 {object} errorResponse "A post with the provided id doesn't exist"
+// @Failure 500 {object} errorResponse
+// @Router /posts/{postId} [get]
+func (s *Server) getPostHandler(c *gin.Context) {
 	postId, err := strconv.Atoi(c.Param("postId"))
 	if err != nil {
 		s.Logger.Debug("post id not an integer", zap.String("postId", c.Param("postId")))
@@ -149,54 +112,25 @@ func (s *Server) getPostHandler(c *gin.Context) {
 		return
 	}
 
-	//TODO: add author info here
-	type response struct {
-		ID    int    `json:"id"`
-		Title string `json:"title"`
-		Body  string `json:"body"`
-	}
-
-	c.JSON(http.StatusOK, response{
+	c.JSON(http.StatusOK, getPostResponse{
 		ID:    post.ID,
 		Title: post.Title,
 		Body:  post.Body,
 	})
 }
 
+// @Summary Deletes a post
+// @Tags post
+// @Accept json
+// @Produce json
+// @Param postId path int true "post id"
+// @Success 200 "Post deleted successfully"
+// @Failure 400 {object} errorResponse "Input is invalid"
+// @Failure 403 {object} errorResponse "The access token is invalid or the permissions for performing this action are insufficient"
+// @Failure 404 {object} errorResponse "A post with the provided id doesn't exist"
+// @Failure 500 {object} errorResponse
+// @Router /posts/{postId} [delete]
 func (s *Server) deletePostHandler(c *gin.Context) {
-	// swagger:operation DELETE /posts post deletePost
-	//
-	// Deletes a post.
-	//
-	// ---
-	// produces:
-	// - application/json
-	// parameters:
-	//   - name: access_token
-	//     in: header
-	//     required: true
-	//     type: string
-	//   - name: post id
-	//     in: query
-	//     required: false
-	//     type: integer
-	//     format: int32
-	// responses:
-	//   '200':
-	//     description: Post deleted successfully.
-	//   '403':
-	//     description: The access token is invalid or the permissions are insufficient to perform this action.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-	//   '404':
-	//     description: The post could not be found.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-	//   '500':
-	//     description: Internal server error.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-
 	user := s.getUserFromContext(c)
 
 	postId, err := strconv.Atoi(c.Param("postId"))
@@ -232,52 +166,20 @@ func (s *Server) deletePostHandler(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// @Summary Deletes a post
+// @Tags post
+// @Accept json
+// @Produce json
+// @Param username path string true "username"
+// @Param page query int32 true "page"
+// @Param limit query int32 true "limit"
+// @Success 200 {object} getPersonalPostsResponse
+// @Failure 400 {object} errorResponse "Input is invalid"
+// @Failure 403 {object} errorResponse "The access token is invalid or the permissions for performing this action are insufficient"
+// @Failure 404 {object} errorResponse "User has no posts"
+// @Failure 500 {object} errorResponse
+// @Router /posts/user/{username} [get]
 func (s *Server) getUserPostsHandler(c *gin.Context) {
-	// swagger:operation GET /posts/user/{username} post getUserPosts
-	//
-	// Returns user's posts.
-	//
-	// ---
-	// produces:
-	// - application/json
-	// parameters:
-	//   - name: access_token
-	//     in: header
-	//     required: true
-	//     type: string
-	//   - name: username
-	//     in: path
-	//     required: true
-	//     type: integer
-	//     format: int64
-	//   - name: page
-	//     in: query
-	//     required: false
-	//     type: integer
-	//     format: int32
-	//   - name: limit
-	//     in: query
-	//     required: false
-	//     type: integer
-	//     format: int32
-	// responses:
-	//   '200':
-	//     description: User's posts are returned.
-	//     schema:
-	//       "$ref": "#/definitions/getPersonalPostsResponse"
-	//   '403':
-	//     description: The access token is invalid.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-	//   '404':
-	//     description: User doesn't have any posts.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-	//   '500':
-	//     description: Internal server error.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-
 	page, limit, err := s.validatePageAndLimit(c)
 	if err != nil {
 		s.Logger.Debug("invalid page and limit", zap.Error(err), zap.String("page", c.Query("page")), zap.String("limit", c.Query("limit")))
@@ -323,47 +225,30 @@ func (s *Server) getUserPostsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, getPersonalPostsResponse{posts})
 }
 
-func (s *Server) editPostHandler(c *gin.Context) {
-	// swagger:operation PUT /posts/{postId} post editPost
-	//
-	// Edits a user.
-	//
-	// ---
-	// produces:
-	// - application/json
-	// parameters:
-	//   - name: access_token
-	//     in: header
-	//     required: true
-	//     type: string
-	//   - name: postId
-	//     in: path
-	//     required: true
-	//     type: integer
-	//     format: int64
-	//   - name: Body
-	//     in: body
-	//     required: true
-	//     schema:
-	//       "$ref": "#/definitions/updatePostRequest"
-	// responses:
-	//   '200':
-	//     description: Post updated successfully.
-	//     schema:
-	//       "$ref": "#/definitions/updatePostResponse"
-	//   '403':
-	//     description: The access token is invalid or the permissions are insufficient to perform this action.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-	//   '404':
-	//     description: Post not found.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
-	//   '500':
-	//     description: Internal server error.
-	//     schema:
-	//       "$ref": "#/definitions/errorResponse"
+type updatePostRequest struct {
+	Title *string `json:"title"`
+	Body  *string `json:"body"`
+}
 
+type updatePostResponse struct {
+	ID    int    `json:"id"`
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}
+
+// @Summary Edits a post
+// @Tags post
+// @Accept json
+// @Produce json
+// @Param postId path int true "post id"
+// @Param request body updatePostRequest true "Edit post body"
+// @Success 200 {object} updatePostResponse
+// @Failure 400 {object} errorResponse "Input is invalid"
+// @Failure 403 {object} errorResponse "The access token is invalid or the permissions for performing this action are insufficient"
+// @Failure 404 {object} errorResponse "User has no posts"
+// @Failure 500 {object} errorResponse
+// @Router /posts/{postId} [put]
+func (s *Server) editPostHandler(c *gin.Context) {
 	user := s.getUserFromContext(c)
 
 	postId, err := strconv.Atoi(c.Param("postId"))
@@ -387,12 +272,6 @@ func (s *Server) editPostHandler(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
 			return
 		}
-	}
-
-	// swagger:model
-	type updatePostRequest struct {
-		Title *string `json:"title"`
-		Body  *string `json:"body"`
 	}
 
 	var request updatePostRequest
@@ -427,13 +306,6 @@ func (s *Server) editPostHandler(c *gin.Context) {
 		s.Logger.Error("couldn't update post", zap.Error(err))
 		s.internalServerErrorResponse(c)
 		return
-	}
-
-	//swagger:model
-	type updatePostResponse struct {
-		ID    int    `json:"id"`
-		Title string `json:"title"`
-		Body  string `json:"body"`
 	}
 
 	response := updatePostResponse{
