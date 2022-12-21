@@ -14,6 +14,22 @@ definitions:
           type: string
         type: array
     type: object
+  server.createPostRequest:
+    properties:
+      body:
+        type: string
+      title:
+        type: string
+    type: object
+  server.createPostResponse:
+    properties:
+      body:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
+    type: object
   server.errorResponse:
     properties:
       error:
@@ -26,6 +42,15 @@ definitions:
         items:
           $ref: '#/definitions/server.personalPosts'
         type: array
+    type: object
+  server.getPostResponse:
+    properties:
+      body:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
     type: object
   server.loginRequest:
     properties:
@@ -89,12 +114,220 @@ definitions:
         description: user's refresh token
         type: string
     type: object
+  server.updatePostRequest:
+    properties:
+      body:
+        type: string
+      title:
+        type: string
+    type: object
+  server.updatePostResponse:
+    properties:
+      body:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
   title: Simple Blog API
   version: "1.0"
 paths:
+  /posts/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create post body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.createPostRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.createPostResponse'
+        "400":
+          description: Input is invalid
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "403":
+          description: The access token is invalid
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+      summary: Creates a post
+      tags:
+      - post
+  /posts/{postId}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: post id
+        in: path
+        name: postId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Post deleted successfully
+        "400":
+          description: Input is invalid
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "403":
+          description: The access token is invalid or the permissions for performing
+            this action are insufficient
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "404":
+          description: A post with the provided id doesn't exist
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+      summary: Deletes a post
+      tags:
+      - post
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: post id
+        in: path
+        name: postId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.getPostResponse'
+        "400":
+          description: Input is invalid
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "403":
+          description: The access token is invalid
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "404":
+          description: A post with the provided id doesn't exist
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+      summary: Gets a post
+      tags:
+      - post
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: post id
+        in: path
+        name: postId
+        required: true
+        type: integer
+      - description: Edit post body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.updatePostRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.updatePostResponse'
+        "400":
+          description: Input is invalid
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "403":
+          description: The access token is invalid or the permissions for performing
+            this action are insufficient
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "404":
+          description: User has no posts
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+      summary: Edits a post
+      tags:
+      - post
+  /posts/user/{username}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: username
+        in: path
+        name: username
+        required: true
+        type: string
+      - description: page
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: limit
+        in: query
+        name: limit
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.getPersonalPostsResponse'
+        "400":
+          description: Input is invalid
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "403":
+          description: The access token is invalid or the permissions for performing
+            this action are insufficient
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "404":
+          description: User has no posts
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+      summary: Deletes a post
+      tags:
+      - post
   /users/{userId}:
     delete:
       consumes:
