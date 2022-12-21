@@ -723,7 +723,7 @@ func (s *Server) getPersonalPostsHandler(c *gin.Context) {
 }
 
 func (s *Server) deleteUserHandler(c *gin.Context) {
-	// swagger:operation DELETE /users user deleteUser
+	// swagger:operation DELETE /users/{userId} user deleteUser
 	//
 	// Deletes a user.
 	//
@@ -735,11 +735,11 @@ func (s *Server) deleteUserHandler(c *gin.Context) {
 	//     in: header
 	//     required: true
 	//     type: string
-	//   - name: user id
-	//     in: query
-	//     required: false
+	//   - name: username
+	//     in: path
+	//     required: true
 	//     type: integer
-	//     format: int32
+	//     format: int64
 	// responses:
 	//   '200':
 	//     description: User deleted successfully.
