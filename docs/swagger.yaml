@@ -21,6 +21,30 @@ definitions:
                 x-go-name: RecoveryCodes
         type: object
         x-go-package: github.com/XiovV/blog-api/server
+    createPostRequest:
+        properties:
+            body:
+                type: string
+                x-go-name: Body
+            title:
+                type: string
+                x-go-name: Title
+        type: object
+        x-go-package: github.com/XiovV/blog-api/server
+    createPostResponse:
+        properties:
+            body:
+                type: string
+                x-go-name: Body
+            id:
+                format: int64
+                type: integer
+                x-go-name: ID
+            title:
+                type: string
+                x-go-name: Title
+        type: object
+        x-go-package: github.com/XiovV/blog-api/server
     errorResponse:
         properties:
             error:
@@ -148,13 +172,185 @@ definitions:
                 x-go-name: RefreshToken
         type: object
         x-go-package: github.com/XiovV/blog-api/server
+    updatePostRequest:
+        properties:
+            body:
+                type: string
+                x-go-name: Body
+            title:
+                type: string
+                x-go-name: Title
+        type: object
+        x-go-package: github.com/XiovV/blog-api/server
+    updatePostResponse:
+        properties:
+            body:
+                type: string
+                x-go-name: Body
+            id:
+                format: int64
+                type: integer
+                x-go-name: ID
+            title:
+                type: string
+                x-go-name: Title
+        type: object
+        x-go-package: github.com/XiovV/blog-api/server
 host: localhost
 info:
     description: The purpose of this application is to provide an application
     title: defines the blog api.
     version: 0.0.1
 paths:
-    /users:
+    /posts:
+        delete:
+            operationId: deletePost
+            parameters:
+                - in: header
+                  name: access_token
+                  required: true
+                  type: string
+                - format: int32
+                  in: query
+                  name: post id
+                  type: integer
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: Post deleted successfully.
+                "403":
+                    description: The access token is invalid or the permissions are insufficient to perform this action.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+                "404":
+                    description: The post could not be found.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+                "500":
+                    description: Internal server error.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+            summary: Deletes a post.
+            tags:
+                - post
+        post:
+            operationId: createPost
+            parameters:
+                - in: header
+                  name: access_token
+                  required: true
+                  type: string
+                - format: int32
+                  in: query
+                  name: post id
+                  type: integer
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: The requested post is returned.
+                    schema:
+                        $ref: '#/definitions/createPostResponse'
+                "400":
+                    description: Input is invalid.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+                "403":
+                    description: The access token is invalid.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+                "500":
+                    description: Internal server error.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+            summary: Creates a post and returns the created post.
+            tags:
+                - post
+    /posts/{postId}:
+        put:
+            operationId: editPost
+            parameters:
+                - in: header
+                  name: access_token
+                  required: true
+                  type: string
+                - format: int64
+                  in: path
+                  name: postId
+                  required: true
+                  type: integer
+                - in: body
+                  name: Body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/updatePostRequest'
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: Post updated successfully.
+                    schema:
+                        $ref: '#/definitions/updatePostResponse'
+                "403":
+                    description: The access token is invalid or the permissions are insufficient to perform this action.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+                "404":
+                    description: Post not found.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+                "500":
+                    description: Internal server error.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+            summary: Edits a user.
+            tags:
+                - post
+    /posts/user/{username}:
+        get:
+            operationId: getUserPosts
+            parameters:
+                - in: header
+                  name: access_token
+                  required: true
+                  type: string
+                - format: int64
+                  in: path
+                  name: username
+                  required: true
+                  type: integer
+                - format: int32
+                  in: query
+                  name: page
+                  type: integer
+                - format: int32
+                  in: query
+                  name: limit
+                  type: integer
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: User's posts are returned.
+                    schema:
+                        $ref: '#/definitions/getPersonalPostsResponse'
+                "403":
+                    description: The access token is invalid.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+                "404":
+                    description: User doesn't have any posts.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+                "500":
+                    description: Internal server error.
+                    schema:
+                        $ref: '#/definitions/errorResponse'
+            summary: Returns user's posts.
+            tags:
+                - post
+    /users/{userId}:
         delete:
             operationId: deleteUser
             parameters:
@@ -162,10 +358,10 @@ paths:
                   name: access_token
                   required: true
                   type: string
-                - description: id of the user
-                  format: int32
-                  in: query
-                  name: id
+                - format: int64
+                  in: path
+                  name: userId
+                  required: true
                   type: integer
             produces:
                 - application/json
