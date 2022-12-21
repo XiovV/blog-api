@@ -27,6 +27,12 @@ type Server struct {
 	gcm cipher.AEAD
 }
 
+// Run -.
+// Swagger spec:
+// @title       Simple Blog API
+// @version     1.0
+// @host        localhost:8080
+// @BasePath    /v1
 func (s *Server) Run() error {
 	err := s.setupGcm()
 	if err != nil {
