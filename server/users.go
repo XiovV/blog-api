@@ -27,9 +27,10 @@ var argon2Params = argon2id.Params{
 }
 
 func (s *Server) registerUserHandler(c *gin.Context) {
-	// swagger:operation POST /users/register registerUser
+	// swagger:operation POST /users/register user registerUser
 	//
-	// Registers a user
+	// Registers a user into the platform if the username and email haven't already been taken.
+	// If everything has gone well, access and refresh tokens will be returned.
 	//
 	// ---
 	// produces:
@@ -41,19 +42,19 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	//       "$ref": "#/definitions/registerRequest"
 	// responses:
 	//   '200':
-	//     description: user successfully registered
+	//     description: User successfully registered.
 	//     schema:
-	//       "$ref": "#/definitions/registerResponse"
+	//       "$ref": "#/definitions/tokenPair"
 	//   '400':
-	//     description: client error
+	//     description: Input is invalid.
 	//     schema:
 	//       "$ref": "#/definitions/errorResponse"
 	//   '409':
-	//     description: user already exists
+	//     description: A user with the provided username or email is already exists.
 	//     schema:
 	//       "$ref": "#/definitions/errorResponse"
 	//   '500':
-	//     description: internal server error
+	//     description: Internal server error.
 	//     schema:
 	//       "$ref": "#/definitions/errorResponse"
 
@@ -129,11 +130,8 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		return
 	}
 
-	// swagger:model
 	type registerResponse struct {
-		// user's access token
-		AccessToken string `json:"access_token"`
-		// user's refresh token
+		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 	}
 
@@ -141,9 +139,10 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 }
 
 func (s *Server) loginUserHandler(c *gin.Context) {
-	// swagger:operation POST /users/login loginUser
+	// swagger:operation POST /users/login user loginUser
 	//
-	// Returns access and refresh tokens
+	// Checks if the login credentials are correct and returns the access and refresh tokens.
+	// If the user has 2FA enabled, 302 Found will be returned, in which case POST /users/login/mfa should be used to log the user in.
 	//
 	// ---
 	// produces:
@@ -157,13 +156,15 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 	//   '200':
 	//     description: user successfully logged in
 	//     schema:
-	//       "$ref": "#/definitions/loginResponse"
+	//       "$ref": "#/definitions/tokenPair"
+	//   '302':
+	//     description: User has 2FA enabled and needs to call POST /users/login/mfa. Only the status code is returned without a body.
 	//   '400':
-	//     description: client error
+	//     description: Input is invalid.
 	//     schema:
 	//       "$ref": "#/definitions/errorResponse"
 	//   '500':
-	//     description: internal server error
+	//     description: Internal server error
 	//     schema:
 	//       "$ref": "#/definitions/errorResponse"
 
@@ -240,11 +241,8 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 		return
 	}
 
-	// swagger:model
 	type loginResponse struct {
-		// user's access token
-		AccessToken string `json:"access_token"`
-		// user's refresh token
+		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 	}
 
@@ -252,12 +250,50 @@ func (s *Server) loginUserHandler(c *gin.Context) {
 }
 
 func (s *Server) loginUserMfaHandler(c *gin.Context) {
-	var request struct {
+	// swagger:operation POST /users/login/mfa user loginUserMfa
+	//
+	// Checks if the login credentials and totp code are correct and returns the access and refresh tokens.
+	// A 400 Bad Request status code and error message will be returned if the user doesn't have 2FA enabled, so only use this if the user
+	// has 2FA enabled on their account.
+	//
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	//   - name: Body
+	//     in: body
+	//     schema:
+	//       "$ref": "#/definitions/mfaLoginRequest"
+	// responses:
+	//   '200':
+	//     description: User successfully logged in.
+	//     schema:
+	//       "$ref": "#/definitions/tokenPair"
+	//   '400':
+	//     description: Input is either invalid, or user doesn't have 2FA enabled.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '500':
+	//     description: Internal server error.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+
+	// swagger:model
+	type mfaLoginRequest struct {
+		// Username for this user
+		// required: true
+		// min length: 3
+		// max length: 50
 		Username string `json:"username"`
+		// Password for this user
+		// min length: 8
 		Password string `json:"password"`
-		TOTP     string `json:"totp"`
+		// TOTP code from an authenticator app
+		// max length: 6
+		TOTP string `json:"totp"`
 	}
 
+	var request mfaLoginRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
 		c.Error(ErrInvalidJSON)
@@ -331,24 +367,59 @@ func (s *Server) loginUserMfaHandler(c *gin.Context) {
 		return
 	}
 
-	// swagger:model
-	type loginMfaResponse struct {
-		// user's access token
-		AccessToken string `json:"access_token"`
-		// user's refresh token
+	type mfaLoginResponse struct {
+		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 	}
 
-	c.JSON(http.StatusOK, loginMfaResponse{accessToken, refreshToken})
+	c.JSON(http.StatusOK, mfaLoginResponse{accessToken, refreshToken})
 }
 
 func (s *Server) loginUserRecoveryHandler(c *gin.Context) {
-	var request struct {
-		Username     string `json:"username"`
-		Password     string `json:"password"`
+	// swagger:operation POST /users/login/recovery user loginUserRecovery
+	//
+	// Checks if the login credentials and recovery code are correct and returns the access and refresh tokens.
+	//
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	//   - name: Body
+	//     in: body
+	//     schema:
+	//       "$ref": "#/definitions/recoveryLoginRequest"
+	// security:
+	//   - access_token: []
+	// responses:
+	//   '200':
+	//     description: User successfully logged in.
+	//     schema:
+	//       "$ref": "#/definitions/tokenPair"
+	//   '400':
+	//     description: Input is either invalid, or the provided recovery code is incorrect.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '500':
+	//     description: Internal server error.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+
+	// swagger:model
+	type recoveryLoginRequest struct {
+		// Username for this user
+		// required: true
+		// min length: 3
+		// max length: 50
+		Username string `json:"username"`
+		// Password for this user
+		// min length: 8
+		Password string `json:"password"`
+		// Recovery code
+		// max length: 7
 		RecoveryCode string `json:"recovery_code"`
 	}
 
+	var request recoveryLoginRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
 		c.Error(ErrInvalidJSON)
@@ -395,6 +466,12 @@ func (s *Server) loginUserRecoveryHandler(c *gin.Context) {
 		return
 	}
 
+	if len(recoveryCodes) == 0 {
+		s.Logger.Debug("user doesn't have any recovery codes", zap.String("username", user.Username))
+		s.badRequestResponse(c, "incorrect recovery code")
+		return
+	}
+
 	ok = s.isRecoveryCodeValid(request.RecoveryCode, recoveryCodes)
 	if !ok {
 		s.Logger.Debug("incorrect recovery code", zap.String("code", request.RecoveryCode), zap.String("username", request.Username))
@@ -411,18 +488,55 @@ func (s *Server) loginUserRecoveryHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := generateAccessToken(user.ID)
+	accessToken, err := generateAccessToken(user.ID)
 	if err != nil {
 		s.Logger.Error("couldn't generate token", zap.Error(err))
 		s.internalServerErrorResponse(c)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"jwt": token})
+	refreshToken, err := generateRefreshToken(user.ID)
+	if err != nil {
+		s.Logger.Error("couldn't generate refreshToken", zap.Error(err))
+		s.internalServerErrorResponse(c)
+		return
+	}
 
+	type recoveryLoginResponse struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	c.JSON(http.StatusOK, recoveryLoginResponse{accessToken, refreshToken})
 }
 
 func (s *Server) setupMfaHandler(c *gin.Context) {
+	// swagger:operation POST /users/mfa user setupMfa
+	//
+	// Returns the secret used for generating TOTP codes.
+	//
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	//   - name: access_token
+	//     in: header
+	//     required: true
+	//     type: string
+	// responses:
+	//   '200':
+	//     description: TOTP Secret is returned.
+	//     schema:
+	//       "$ref": "#/definitions/setupMfaHandlerResponse"
+	//   '403':
+	//     description: The access token is invalid.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '500':
+	//     description: Internal server error.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+
 	user := s.getUserFromContext(c)
 
 	key, err := totp.Generate(totp.GenerateOpts{Issuer: "blog-api", AccountName: user.Username})
@@ -432,17 +546,60 @@ func (s *Server) setupMfaHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"secret": key.Secret()})
+	//swagger:model
+	type setupMfaHandlerResponse struct {
+		// TOTP Secret
+		Secret string `json:"secret"`
+	}
+
+	c.JSON(http.StatusOK, setupMfaHandlerResponse{key.Secret()})
 }
 
 func (s *Server) confirmMfaHandler(c *gin.Context) {
+	// swagger:operation POST /users/mfa/confirm user confirmMfa
+	//
+	// Checks if the provided TOTP code is correct and returns an array of recovery codes.
+	//
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	//   - name: access_token
+	//     in: header
+	//     required: true
+	//     type: string
+	//   - name: Body
+	//     in: body
+	//     required: true
+	//     schema:
+	//       "$ref": "#/definitions/confirmMfaRequest"
+	// responses:
+	//   '200':
+	//     description: Recovery codes are returned.
+	//     schema:
+	//       "$ref": "#/definitions/confirmMfaResponse"
+	//   '400':
+	//     description: Input is invalid.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '403':
+	//     description: The access token is invalid.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '500':
+	//     description: Internal server error.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+
 	user := s.getUserFromContext(c)
 
-	var request struct {
+	//swagger:model
+	type confirmMfaRequest struct {
 		Secret string `json:"secret"`
 		TOTP   string `json:"totp"`
 	}
 
+	var request confirmMfaRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
 		c.Error(ErrInvalidJSON)
@@ -478,11 +635,56 @@ func (s *Server) confirmMfaHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"recovery_codes": strings.Join(recoveryCodes, ", ")})
+	//swagger:model
+	type confirmMfaResponse struct {
+		RecoveryCodes []string `json:"recovery_codes"`
+	}
+
+	c.JSON(http.StatusOK, confirmMfaResponse{recoveryCodes})
 }
 
 func (s *Server) getPersonalPostsHandler(c *gin.Context) {
-	type response struct {
+	// swagger:operation GET /users/posts user getPersonalPosts
+	//
+	// Returns user's posts.
+	//
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	//   - name: access_token
+	//     in: header
+	//     required: true
+	//     type: string
+	//   - name: page
+	//     in: query
+	//     required: false
+	//     type: integer
+	//     format: int32
+	//   - name: limit
+	//     in: query
+	//     required: false
+	//     type: integer
+	//     format: int32
+	// responses:
+	//   '200':
+	//     description: User's posts are returned.
+	//     schema:
+	//       "$ref": "#/definitions/getPersonalPostsResponse"
+	//   '403':
+	//     description: The access token is invalid.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '404':
+	//     description: User doesn't have any posts.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '500':
+	//     description: Internal server error.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+
+	type personalPosts struct {
 		ID    int    `json:"id"`
 		Title string `json:"title"`
 		Body  string `json:"body"`
@@ -496,26 +698,61 @@ func (s *Server) getPersonalPostsHandler(c *gin.Context) {
 	}
 
 	user := s.getUserFromContext(c)
-	posts, err := s.PostRepository.FindByUserID(user.ID, page, limit)
+	userPosts, err := s.PostRepository.FindByUserID(user.ID, page, limit)
 	if err != nil {
 		s.Logger.Debug("couldn't find user's posts", zap.String("username", user.Username))
 		c.JSON(http.StatusNotFound, gin.H{"error": "user doesn't have any posts"})
 		return
 	}
 
-	var res []response
-	for _, post := range posts {
-		res = append(res, response{
+	var posts []personalPosts
+	for _, post := range userPosts {
+		posts = append(posts, personalPosts{
 			ID:    post.ID,
 			Title: post.Title,
 			Body:  post.Body,
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"posts": res})
+	//swagger:model
+	type getPersonalPostsResponse struct {
+		Posts []personalPosts `json:"posts"`
+	}
+
+	c.JSON(http.StatusOK, getPersonalPostsResponse{posts})
 }
 
 func (s *Server) deleteUserHandler(c *gin.Context) {
+	// swagger:operation DELETE /users user deleteUser
+	//
+	// Deletes a user.
+	//
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	//   - name: access_token
+	//     in: header
+	//     required: true
+	//     type: string
+	//   - name: id
+	//     description: id of the user
+	//     in: query
+	//     required: false
+	//     type: integer
+	//     format: int32
+	// responses:
+	//   '200':
+	//     description: User deleted successfully.
+	//   '403':
+	//     description: The access token is invalid or the permissions are insufficient to perform this action.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '500':
+	//     description: Internal server error.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+
 	user := s.getUserFromContext(c)
 
 	ok := s.enforcePermissions(c, user.Role, "user", "delete")
@@ -543,6 +780,41 @@ func (s *Server) deleteUserHandler(c *gin.Context) {
 }
 
 func (s *Server) refreshTokenHandler(c *gin.Context) {
+	// swagger:operation POST /users/token/refresh user refreshTokens
+	//
+	// Refreshes the user's tokens.
+	//
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	//   - name: access_token
+	//     in: header
+	//     required: true
+	//     type: string
+	//   - name: Body
+	//     in: body
+	//     required: true
+	//     schema:
+	//       "$ref": "#/definitions/refreshTokenRequest"
+	// responses:
+	//   '200':
+	//     description: New access token and refresh tokens are returned.
+	//     schema:
+	//       "$ref": "#/definitions/tokenPair"
+	//   '400':
+	//     description: Input is invalid.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '403':
+	//     description: The access token or refresh token is invalid.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+	//   '500':
+	//     description: Internal server error.
+	//     schema:
+	//       "$ref": "#/definitions/errorResponse"
+
 	authToken, err := s.validateAuthorizationHeader(c)
 	if err != nil {
 		s.Logger.Debug("authorization header validation error", zap.Error(err))
@@ -557,10 +829,13 @@ func (s *Server) refreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	var request struct {
+	// swagger:model
+	type refreshTokenRequest struct {
+		// User's refresh token
 		RefreshToken string `json:"refresh_token"`
 	}
 
+	var request refreshTokenRequest
 	if err = c.ShouldBindJSON(&request); err != nil {
 		s.Logger.Debug("json is invalid", zap.Error(err))
 		c.Error(ErrInvalidJSON)
@@ -627,5 +902,10 @@ func (s *Server) refreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"access_token": newAccessToken, "refresh_token": newRefreshToken})
+	type refreshTokenResponse struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	c.JSON(http.StatusOK, refreshTokenResponse{newAccessToken, newRefreshToken})
 }
