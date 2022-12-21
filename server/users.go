@@ -735,8 +735,7 @@ func (s *Server) deleteUserHandler(c *gin.Context) {
 	//     in: header
 	//     required: true
 	//     type: string
-	//   - name: id
-	//     description: id of the user
+	//   - name: user id
 	//     in: query
 	//     required: false
 	//     type: integer
