@@ -30,6 +30,7 @@ type createPostResponse struct {
 // @Accept json
 // @Produce json
 // @Param request body createPostRequest true "Create post body"
+// @Security ApiKeyAuth
 // @Success 200 {object} createPostResponse
 // @Failure 400 {object} errorResponse "Input is invalid"
 // @Failure 403 {object} errorResponse "The access token is invalid"
@@ -91,6 +92,7 @@ type getPostResponse struct {
 // @Accept json
 // @Produce json
 // @Param postId path int true "post id"
+// @Security ApiKeyAuth
 // @Success 200 {object} getPostResponse
 // @Failure 400 {object} errorResponse "Input is invalid"
 // @Failure 403 {object} errorResponse "The access token is invalid"
@@ -124,6 +126,7 @@ func (s *Server) getPostHandler(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param postId path int true "post id"
+// @Security ApiKeyAuth
 // @Success 200 "Post deleted successfully"
 // @Failure 400 {object} errorResponse "Input is invalid"
 // @Failure 403 {object} errorResponse "The access token is invalid or the permissions for performing this action are insufficient"
@@ -173,6 +176,7 @@ func (s *Server) deletePostHandler(c *gin.Context) {
 // @Param username path string true "username"
 // @Param page query int32 true "page"
 // @Param limit query int32 true "limit"
+// @Security ApiKeyAuth
 // @Success 200 {object} getPersonalPostsResponse
 // @Failure 400 {object} errorResponse "Input is invalid"
 // @Failure 403 {object} errorResponse "The access token is invalid or the permissions for performing this action are insufficient"
@@ -242,6 +246,7 @@ type updatePostResponse struct {
 // @Produce json
 // @Param postId path int true "post id"
 // @Param request body updatePostRequest true "Edit post body"
+// @Security ApiKeyAuth
 // @Success 200 {object} updatePostResponse
 // @Failure 400 {object} errorResponse "Input is invalid"
 // @Failure 403 {object} errorResponse "The access token is invalid or the permissions for performing this action are insufficient"
