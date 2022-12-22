@@ -110,7 +110,7 @@ func (s *Server) getPostHandler(c *gin.Context) {
 	post, err := s.PostRepository.FindPostByPostID(postId)
 	if err != nil {
 		s.Logger.Debug("post could not be found", zap.Error(err), zap.Int("postId", postId))
-		c.JSON(http.StatusNotFound, gin.H{"error": "the post could be found"})
+		c.Error(err)
 		return
 	}
 
@@ -146,7 +146,7 @@ func (s *Server) deletePostHandler(c *gin.Context) {
 	post, err := s.PostRepository.FindPostByPostID(postId)
 	if err != nil {
 		s.Logger.Debug("post could not be found", zap.Error(err), zap.Int("postId", postId))
-		c.JSON(http.StatusNotFound, gin.H{"error": "the post could not be found"})
+		c.Error(err)
 		return
 	}
 
@@ -196,14 +196,14 @@ func (s *Server) getUserPostsHandler(c *gin.Context) {
 	user, err := s.UserRepository.FindUserByUsername(username)
 	if err != nil {
 		s.Logger.Debug("couldn't find user", zap.Error(err), zap.String("username", username))
-		c.JSON(http.StatusNotFound, gin.H{"error": "couldn't find user"})
+		c.Error(err)
 		return
 	}
 
 	userPosts, err := s.PostRepository.FindByUserID(user.ID, page, limit)
 	if err != nil {
 		s.Logger.Debug("couldn't find user posts", zap.Error(err), zap.String("username", username))
-		c.JSON(http.StatusNotFound, gin.H{"error": "this user has no posts"})
+		c.Error(err)
 		return
 	}
 
@@ -266,7 +266,7 @@ func (s *Server) editPostHandler(c *gin.Context) {
 	post, err := s.PostRepository.FindPostByPostID(postId)
 	if err != nil {
 		s.Logger.Debug("couldn't find post", zap.Int("postId", postId))
-		c.JSON(http.StatusNotFound, gin.H{"error": "post could not be found"})
+		c.Error(err)
 		return
 	}
 
