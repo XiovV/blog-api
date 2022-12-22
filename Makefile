@@ -1,3 +1,3 @@
 .PHONY: swagger
 swagger:
-	swagger generate spec --scan-models --output=docs/swagger.yaml
+	swag init -g server/server.go
