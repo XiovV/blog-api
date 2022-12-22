@@ -19,12 +19,15 @@ func (s *Server) errorHandler() gin.HandlerFunc {
 
 			switch {
 			case errors.Is(err, repository.ErrUserAlreadyExists):
-				c.JSON(http.StatusConflict, gin.H{"error": "a user with this username or email already exists"})
+				c.JSON(http.StatusConflict, err)
+			case errors.Is(err, repository.ErrUserNotFound), errors.Is(err, repository.ErrPostNotFound):
+				c.JSON(http.StatusNotFound, err)
 			case errors.Is(err, ErrInvalidJSON):
-				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"})
+				c.JSON(http.StatusBadRequest, err)
 			case errors.As(err, &errInvalidInput):
 				c.JSON(http.StatusBadRequest, gin.H{"error": errInvalidInput.Message})
 			default:
+				s.Logger.Error("uncaught error", zap.Error(err))
 				s.internalServerErrorResponse(c)
 			}
 		}
