@@ -39,7 +39,7 @@ type registerRequest struct {
 // @Param request body registerRequest true "Register user body"
 // @Success 200 {object} tokenPair
 // @Failure 400 {object} errorResponse
-// @Failure 409 {object} errorResponse
+// @Failure 409 {object} errorResponse "User with this username or email already exists"
 // @Failure 500 {object} errorResponse
 // @Router /users/register [post]
 func (s *Server) registerUserHandler(c *gin.Context) {
@@ -408,6 +408,7 @@ type setupMfaHandlerResponse struct {
 // @Tags user
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Success 200 {object} setupMfaHandlerResponse
 // @Failure 403 {object} errorResponse "The access token is invalid"
 // @Failure 500 {object} errorResponse
@@ -439,6 +440,7 @@ type confirmMfaResponse struct {
 // @Accept json
 // @Produce json
 // @Param request body confirmMfaRequest true "Login user body"
+// @Security ApiKeyAuth
 // @Success 200 {object} confirmMfaResponse
 // @Failure 400 {object} errorResponse "Input is invalid"
 // @Failure 403 {object} errorResponse "The access token is invalid"
@@ -502,6 +504,7 @@ type getPersonalPostsResponse struct {
 // @Produce json
 // @Param page query int32 true "page"
 // @Param limit query int32 true "limit"
+// @Security ApiKeyAuth
 // @Success 200 {object} getPersonalPostsResponse
 // @Failure 400 {object} errorResponse "Input is invalid"
 // @Failure 403 {object} errorResponse "The access token is invalid"
@@ -541,6 +544,7 @@ func (s *Server) getPersonalPostsHandler(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param userId path int true "user id"
+// @Security ApiKeyAuth
 // @Success 200 "User deleted successfully"
 // @Failure 400 {object} errorResponse "Input is invalid"
 // @Failure 403 {object} errorResponse "The access token is invalid"
@@ -582,6 +586,7 @@ type refreshTokenRequest struct {
 // @Accept json
 // @Produce json
 // @Param request body refreshTokenRequest true "Refresh token body"
+// @Security ApiKeyAuth
 // @Success 200 {object} tokenPair
 // @Failure 400 {object} errorResponse "Input is invalid"
 // @Failure 403 {object} errorResponse "The access token or refresh token is invalid."
