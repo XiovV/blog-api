@@ -523,7 +523,7 @@ func (s *Server) getPersonalPostsHandler(c *gin.Context) {
 	userPosts, err := s.PostRepository.FindByUserID(user.ID, page, limit)
 	if err != nil {
 		s.Logger.Debug("couldn't find user's posts", zap.String("username", user.Username))
-		c.JSON(http.StatusNotFound, gin.H{"error": "user doesn't have any posts"})
+		c.Error(err)
 		return
 	}
 
