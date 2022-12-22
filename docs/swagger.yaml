@@ -166,6 +166,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/server.errorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Creates a post
       tags:
       - post
@@ -201,6 +203,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/server.errorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Deletes a post
       tags:
       - post
@@ -236,6 +240,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/server.errorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Gets a post
       tags:
       - post
@@ -278,6 +284,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/server.errorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Edits a post
       tags:
       - post
@@ -325,6 +333,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/server.errorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Deletes a post
       tags:
       - post
@@ -355,6 +365,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/server.errorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Returns user's posts.
       tags:
       - user
@@ -475,6 +487,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/server.errorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Returns the secret used for generating TOTP codes.
       tags:
       - user
@@ -508,6 +522,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/server.errorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Checks if the provided TOTP code is correct and returns an array of
         recovery codes.
       tags:
@@ -550,6 +566,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/server.errorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Returns user's posts.
       tags:
       - user
@@ -576,7 +594,7 @@ paths:
           schema:
             $ref: '#/definitions/server.errorResponse'
         "409":
-          description: Conflict
+          description: User with this username or email already exists
           schema:
             $ref: '#/definitions/server.errorResponse'
         "500":
@@ -617,7 +635,14 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/server.errorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Return a fresh pair of tokens.
       tags:
       - user
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
