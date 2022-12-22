@@ -17,6 +17,11 @@ const (
 	defaultActiveState = true
 )
 
+var (
+	ErrUserAlreadyExists = errors.New("user with this username or email already exists")
+	ErrUserNotFound      = errors.New("user not found")
+)
+
 type User struct {
 	ID        int
 	Username  string
@@ -31,6 +36,19 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
+func (r *UserRepository) handleError(err error) error {
+	err = handleError(err)
+
+	switch {
+	case errors.Is(err, ErrNotFound):
+		return ErrUserNotFound
+	case errors.Is(err, ErrUniqueViolation):
+		return ErrUserAlreadyExists
+	default:
+		return err
+	}
+}
+
 func (r *UserRepository) InsertUser(user User) (int, error) {
 	var id int
 
@@ -39,14 +57,7 @@ func (r *UserRepository) InsertUser(user User) (int, error) {
 
 	err := r.db.GetContext(ctx, &id, "INSERT INTO \"user\" (username, email, password, role, active) VALUES ($1, $2, $3, $4, $5) RETURNING id", user.Username, user.Email, user.Password, normalRole, defaultActiveState)
 	if err != nil {
-		var pqErr *pq.Error
-		if errors.As(err, &pqErr) {
-			if pqErr.Code.Name() == "unique_violation" {
-				return 0, ErrUserAlreadyExists
-			}
-		}
-
-		return 0, err
+		return 0, r.handleError(err)
 	}
 
 	return id, nil
@@ -58,7 +69,7 @@ func (r *UserRepository) DeleteUserByID(userId int) error {
 
 	_, err := r.db.ExecContext(ctx, "DELETE FROM \"user\" WHERE id = $1", userId)
 	if err != nil {
-		return err
+		return r.handleError(err)
 	}
 
 	return nil
@@ -70,7 +81,7 @@ func (r *UserRepository) InsertMfaSecret(userId int, secret []byte, recoveryCode
 
 	_, err := r.db.ExecContext(ctx, "UPDATE \"user\" SET mfa_secret = $1, recovery = $2 WHERE id = $3", secret, pq.Array(recoveryCodes), userId)
 	if err != nil {
-		return err
+		return r.handleError(err)
 	}
 
 	return nil
@@ -82,7 +93,7 @@ func (r *UserRepository) SetRecoveryCodes(userId int, recoveryCodes []string) er
 
 	_, err := r.db.ExecContext(ctx, "UPDATE \"user\" SET recovery = $1 WHERE id = $2", pq.Array(recoveryCodes), userId)
 	if err != nil {
-		return err
+		return r.handleError(err)
 	}
 
 	return nil
@@ -94,7 +105,7 @@ func (r *UserRepository) SetActiveState(userId int, active bool) error {
 
 	_, err := r.db.ExecContext(ctx, "UPDATE \"user\" SET active = $1 WHERE id = $2", active, userId)
 	if err != nil {
-		return err
+		return r.handleError(err)
 	}
 
 	return nil
@@ -108,7 +119,7 @@ func (r *UserRepository) FindUserByID(id int) (User, error) {
 
 	err := r.db.GetContext(ctx, &user, "SELECT \"user\".id, username, email, password, mfa_secret, active, role.name as role FROM \"user\" INNER JOIN role ON \"user\".role = role.id WHERE \"user\".id = $1", id)
 	if err != nil {
-		return User{}, err
+		return User{}, r.handleError(err)
 	}
 
 	return user, nil
@@ -122,7 +133,7 @@ func (r *UserRepository) FindUserByUsername(username string) (User, error) {
 
 	err := r.db.GetContext(ctx, &user, "SELECT \"user\".id, username, email, password, mfa_secret FROM \"user\" WHERE username = $1", username)
 	if err != nil {
-		return User{}, err
+		return User{}, r.handleError(err)
 	}
 
 	return user, nil
@@ -137,7 +148,7 @@ func (r *UserRepository) GetUserRecoveryCodes(username string) ([]string, error)
 	row := r.db.QueryRowxContext(ctx, "SELECT recovery FROM \"user\" WHERE username = $1", username)
 	err := row.Scan(pq.Array(&recoveryCodes))
 	if err != nil {
-		return nil, err
+		return nil, r.handleError(err)
 	}
 
 	return recoveryCodes, nil
