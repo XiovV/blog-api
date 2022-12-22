@@ -2,8 +2,10 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 	"time"
 )
@@ -13,10 +15,6 @@ const (
 	MaxIdleConns        = 25
 	MaxIdleTime         = "15m"
 	DefaultQueryTimeout = 5
-)
-
-var (
-	ErrUserAlreadyExists = errors.New("username or email are already taken")
 )
 
 type Postgres struct {
@@ -56,4 +54,19 @@ func calculateOffset(page, limit int) int {
 
 func newBackgroundContext(duration int) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), time.Duration(duration)*time.Second)
+}
+
+func handleError(err error) error {
+	var pqErr *pq.Error
+	switch {
+	case errors.As(err, &pqErr):
+		if pqErr.Code.Name() == "unique_violation" {
+			return ErrUniqueViolation
+		}
+
+	case errors.Is(err, sql.ErrNoRows):
+		return ErrNotFound
+	}
+
+	return err
 }
