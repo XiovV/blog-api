@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
+	"os"
 )
 
 const (
@@ -50,6 +51,8 @@ func (s *Server) Run() error {
 	router.Use(gin.Logger(), gin.Recovery(), s.CORS(), s.errorHandler())
 
 	v1 := router.Group("/v1")
+
+	v1.GET("/health", s.healthCheck)
 
 	usersPublic := v1.Group("/users")
 	{
@@ -102,4 +105,14 @@ func (s *Server) setupGcm() error {
 	s.gcm = gcm
 
 	return nil
+}
+
+func (s *Server) healthCheck(c *gin.Context) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"version": "1.0.1", "host": hostname})
 }
