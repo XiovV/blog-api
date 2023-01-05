@@ -810,24 +810,24 @@ func (s *Server) resetUserPasswordHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO: better logging
 	hash, err := argon2id.CreateHash(request.Password, &argon2Params)
 	if err != nil {
-		c.Error(err)
+		s.Logger.Debug("couldn't hash password", zap.Error(err))
+		s.internalServerErrorResponse(c)
 		return
 	}
 
-	// TODO: better logging
 	err = s.UserRepository.SetPassword(passwordResetToken.UserID, hash)
 	if err != nil {
-		c.Error(err)
+		s.Logger.Error("couldn't change user's password", zap.Error(err), zap.Int("userId", passwordResetToken.UserID))
+		s.internalServerErrorResponse(c)
 		return
 	}
 
-	// TODO: better logging
 	err = s.UserRepository.DeleteAllPasswordResetTokensForUser(passwordResetToken.UserID)
 	if err != nil {
-		c.Error(err)
+		s.Logger.Error("couldn't delete all password reset tokens for user", zap.Error(err), zap.Int("userId", passwordResetToken.UserID))
+		s.internalServerErrorResponse(c)
 		return
 	}
 
