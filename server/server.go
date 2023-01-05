@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"github.com/XiovV/blog-api/config"
+	"github.com/XiovV/blog-api/pkg/mailer"
 	"github.com/XiovV/blog-api/pkg/repository"
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
@@ -24,6 +25,7 @@ type Server struct {
 	PostRepository *repository.PostRepository
 	Logger         *zap.Logger
 	CasbinEnforcer *casbin.Enforcer
+	Mailer         *mailer.Mailer
 
 	gcm cipher.AEAD
 }
@@ -61,7 +63,8 @@ func (s *Server) Run() error {
 		usersPublic.POST("/login/mfa", s.loginUserMfaHandler)
 		usersPublic.POST("/login/recovery", s.loginUserRecoveryHandler)
 		usersPublic.POST("/token/refresh", s.refreshTokenHandler)
-
+		usersPublic.POST("/password-reset", s.createPasswordResetToken)
+		usersPublic.PUT("/password-reset", s.resetUserPasswordHandler)
 	}
 
 	usersAuth := v1.Group("/users")
