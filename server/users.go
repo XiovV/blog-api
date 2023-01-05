@@ -11,6 +11,7 @@ import (
 	"net/mail"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -79,7 +80,8 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		return
 	}
 
-	id, err := s.UserRepository.InsertUser(repository.User{Username: request.Username, Email: request.Email, Password: hash})
+	newUser := repository.User{Username: request.Username, Email: request.Email, Password: hash}
+	id, err := s.UserRepository.InsertUser(newUser)
 	if err != nil {
 		s.Logger.Debug("couldn't insert user", zap.Error(err), zap.String("username", request.Username))
 		c.Error(err)
@@ -99,6 +101,13 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		s.internalServerErrorResponse(c)
 		return
 	}
+
+	go func() {
+		err = s.Mailer.Send(request.Email, "welcome_user.tmpl", newUser)
+		if err != nil {
+			s.Logger.Error("couldn't send welcome email", zap.Error(err), zap.String("username", request.Username))
+		}
+	}()
 
 	type registerResponse struct {
 		AccessToken  string `json:"access_token"`
@@ -663,7 +672,7 @@ func (s *Server) refreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	err = s.UserRepository.InsertRefreshToken(repository.Token{
+	err = s.UserRepository.InsertRefreshToken(repository.RefreshToken{
 		UserID: userId,
 		Token:  request.RefreshToken,
 	})
@@ -680,4 +689,128 @@ func (s *Server) refreshTokenHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, refreshTokenResponse{newAccessToken, newRefreshToken})
+}
+
+type createPasswordResetTokenRequest struct {
+	Email string `json:"email"`
+}
+
+// TODO: document this handler
+func (s *Server) createPasswordResetToken(c *gin.Context) {
+	var request createPasswordResetTokenRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		s.Logger.Debug("json is invalid", zap.Error(err))
+		c.Error(ErrInvalidJSON)
+		return
+	}
+
+	request.Email = strings.TrimSpace(request.Email)
+
+	_, err := mail.ParseAddress(request.Email)
+	if err != nil {
+		s.Logger.Debug("email is invalid", zap.String("email", request.Email))
+		s.badRequestResponse(c, "email is invalid")
+		return
+	}
+
+	user, err := s.UserRepository.FindUserByEmail(request.Email)
+	if err != nil {
+		s.Logger.Debug("couldn't find user", zap.Error(err), zap.String("email", request.Email))
+		c.Error(err)
+		return
+	}
+
+	token := randomString(PasswordResetTokenLength)
+
+	passwordResetToken := repository.PasswordResetToken{
+		UserID: user.ID,
+		Token:  token,
+		Expiry: time.Now().Add(15 * time.Minute).Unix(),
+	}
+
+	err = s.UserRepository.InsertPasswordResetToken(passwordResetToken)
+	if err != nil {
+		s.Logger.Error("couldn't insert password reset token", zap.Error(err), zap.String("email", request.Email))
+		c.Error(err)
+		return
+	}
+
+	data := map[string]any{
+		"passwordResetToken": token,
+		"username":           user.Username,
+	}
+
+	go func() {
+		err = s.Mailer.Send(request.Email, "password_reset.tmpl", data)
+		if err != nil {
+			s.Logger.Error("couldn't send email", zap.Error(err), zap.String("email", request.Email))
+		}
+	}()
+
+	s.successResponse(c, "password reset email has been sent")
+}
+
+type resetUserPasswordRequest struct {
+	Password string `json:"password"`
+}
+
+func (s *Server) resetUserPasswordHandler(c *gin.Context) {
+	var request resetUserPasswordRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		s.Logger.Debug("json is invalid", zap.Error(err))
+		c.Error(ErrInvalidJSON)
+		return
+	}
+
+	token := c.Query("token")
+
+	v := validator.New()
+
+	v.RequiredExact("token", token, PasswordResetTokenLength)
+	v.RequiredMin("password", request.Password, 8)
+	ok, errors := v.IsValid()
+	if !ok {
+		s.Logger.Debug("input invalid", zap.Strings("err", errors))
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors})
+		return
+	}
+
+	passwordResetToken, err := s.UserRepository.GetPasswordResetToken(token)
+	if err != nil {
+		s.Logger.Debug("couldn't get password reset token", zap.Error(err), zap.String("token", token))
+		c.Error(err)
+		return
+	}
+
+	if passwordResetToken.Expiry < time.Now().Unix() {
+		c.JSON(http.StatusForbidden, gin.H{"error": "this token has expired"})
+		err = s.UserRepository.DeletePasswordResetToken(token)
+		if err != nil {
+			s.Logger.Error("couldn't delete password reset token", zap.Error(err), zap.String("token", token))
+		}
+		return
+	}
+
+	// TODO: better logging
+	hash, err := argon2id.CreateHash(request.Password, &argon2Params)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	// TODO: better logging
+	err = s.UserRepository.SetPassword(passwordResetToken.UserID, hash)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	// TODO: better logging
+	err = s.UserRepository.DeleteAllPasswordResetTokensForUser(passwordResetToken.UserID)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	s.successResponse(c, "password has been changed successfully")
 }
