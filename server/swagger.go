@@ -32,6 +32,12 @@ type errorResponse struct {
 }
 
 // swagger:model
+type messageResponse struct {
+	// Message response model
+	Message string `json:"message"`
+}
+
+// swagger:model
 type tokenPair struct {
 	// user's access token
 	AccessToken string `json:"access_token"`
