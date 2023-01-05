@@ -28,4 +28,8 @@ Nothing needs to be manually edited here.
 
 ### `migrations`
 Contains all of the necessary migrations for the database, created with [migrate](https://github.com/golang-migrate/migrate).
-Before running the migrations with `make migrate`, make sure to set the POSTGRES_URL environment variable. Reference: [migrate PostgreSQL](https://github.com/golang-migrate/migrate/blob/master/database/postgres/TUTORIAL.md).
+Before running the migrations with, make sure to set the POSTGRES_URL environment variable. Reference: [migrate PostgreSQL](https://github.com/golang-migrate/migrate/blob/master/database/postgres/TUTORIAL.md).
+Run the migrations:
+```bash
+make migrate
+```
