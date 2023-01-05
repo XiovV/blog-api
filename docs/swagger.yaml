@@ -111,6 +111,11 @@ definitions:
       username:
         type: string
     type: object
+  server.resetUserPasswordRequest:
+    properties:
+      password:
+        type: string
+    type: object
   server.setupMfaHandlerResponse:
     properties:
       secret:
@@ -566,7 +571,44 @@ paths:
           schema:
             $ref: '#/definitions/server.errorResponse'
       summary: Creates a password reset token and sends an email with password reset
-        instructions
+        instructions.
+      tags:
+      - user
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Reset password body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.resetUserPasswordRequest'
+      - description: password reset token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.messageResponse'
+        "400":
+          description: Input is invalid
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "403":
+          description: Password reset token is invalid
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.errorResponse'
+      summary: Resets the user's password.
       tags:
       - user
   /users/posts:

@@ -564,6 +564,62 @@ const docTemplate = `{
             }
         },
         "/users/password-reset": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Resets the user's password.",
+                "parameters": [
+                    {
+                        "description": "Reset password body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/server.resetUserPasswordRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "password reset token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.messageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Input is invalid",
+                        "schema": {
+                            "$ref": "#/definitions/server.errorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Password reset token is invalid",
+                        "schema": {
+                            "$ref": "#/definitions/server.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.errorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -574,7 +630,7 @@ const docTemplate = `{
                 "tags": [
                     "user"
                 ],
-                "summary": "Creates a password reset token and sends an email with password reset instructions",
+                "summary": "Creates a password reset token and sends an email with password reset instructions.",
                 "parameters": [
                     {
                         "description": "Create password reset token body",
@@ -1004,6 +1060,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.resetUserPasswordRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
                     "type": "string"
                 }
             }
