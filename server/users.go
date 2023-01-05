@@ -762,6 +762,17 @@ type resetUserPasswordRequest struct {
 	Password string `json:"password"`
 }
 
+// @Summary Resets the user's password.
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param request body resetUserPasswordRequest true "Reset password body"
+// @Param token query string true "password reset token"
+// @Success 200 {object} messageResponse
+// @Failure 400 {object} errorResponse "Input is invalid"
+// @Failure 403 {object} errorResponse "Password reset token is invalid"
+// @Failure 500 {object} errorResponse
+// @Router /users/password-reset [put]
 func (s *Server) resetUserPasswordHandler(c *gin.Context) {
 	var request resetUserPasswordRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -786,7 +797,7 @@ func (s *Server) resetUserPasswordHandler(c *gin.Context) {
 	passwordResetToken, err := s.UserRepository.GetPasswordResetToken(token)
 	if err != nil {
 		s.Logger.Debug("couldn't get password reset token", zap.Error(err), zap.String("token", token))
-		c.Error(err)
+		c.JSON(http.StatusForbidden, gin.H{"error": "wrong reset password token"})
 		return
 	}
 
