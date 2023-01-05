@@ -88,7 +88,7 @@ const docTemplate = `{
                 "tags": [
                     "post"
                 ],
-                "summary": "Deletes a post",
+                "summary": "Gets a post",
                 "parameters": [
                     {
                         "type": "string",
@@ -563,6 +563,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/password-reset": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Creates a password reset token and sends an email with password reset instructions",
+                "parameters": [
+                    {
+                        "description": "Create password reset token body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/server.createPasswordResetTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.messageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Input is invalid",
+                        "schema": {
+                            "$ref": "#/definitions/server.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/posts": {
             "get": {
                 "security": [
@@ -812,6 +857,14 @@ const docTemplate = `{
                 }
             }
         },
+        "server.createPasswordResetTokenRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
         "server.createPostRequest": {
             "type": "object",
             "properties": {
@@ -878,6 +931,15 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.messageResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "description": "Message response model",
                     "type": "string"
                 }
             }
