@@ -8,14 +8,16 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
-	MaxLimitValue       = 100
-	MinLimitValue       = 1
-	MinPageValue        = 1
-	RecoveryCodesAmount = 16
-	RecoveryCodeLength  = 7
+	MaxLimitValue            = 100
+	MinLimitValue            = 1
+	MinPageValue             = 1
+	RecoveryCodesAmount      = 16
+	RecoveryCodeLength       = 7
+	PasswordResetTokenLength = 20
 )
 
 func (s *Server) validatePageAndLimit(c *gin.Context) (int, int, error) {
@@ -59,7 +61,7 @@ func generateRecoveryCodes() []string {
 	codes := []string{}
 
 	for i := 0; i <= RecoveryCodesAmount; i++ {
-		codes = append(codes, randomString())
+		codes = append(codes, randomString(RecoveryCodeLength))
 	}
 
 	return codes
@@ -85,10 +87,12 @@ func (s *Server) validateAuthorizationHeader(c *gin.Context) (string, error) {
 	return authorizationHeaderSplit[1], nil
 }
 
-func randomString() string {
+func randomString(length int) string {
+	rand.Seed(time.Now().UnixNano())
+
 	charset := []byte("abcdefghijklmnopqrstuvwxyz")
 
-	b := make([]byte, RecoveryCodeLength)
+	b := make([]byte, length)
 	for i := range b {
 		b[i] = charset[rand.Intn(len(charset))]
 	}
