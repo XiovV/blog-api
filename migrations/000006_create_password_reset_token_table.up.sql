@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS token_blacklist(
+CREATE TABLE IF NOT EXISTS password_reset_token(
     id BIGSERIAL PRIMARY KEY NOT NULL,
     user_id BIGINT NOT NULL,
     token text NOT NULL,
