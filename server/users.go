@@ -695,7 +695,15 @@ type createPasswordResetTokenRequest struct {
 	Email string `json:"email"`
 }
 
-// TODO: document this handler
+// @Summary Creates a password reset token and sends an email with password reset instructions.
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param request body createPasswordResetTokenRequest true "Create password reset token body"
+// @Success 200 {object} messageResponse
+// @Failure 400 {object} errorResponse "Input is invalid"
+// @Failure 500 {object} errorResponse
+// @Router /users/password-reset [post]
 func (s *Server) createPasswordResetToken(c *gin.Context) {
 	var request createPasswordResetTokenRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
