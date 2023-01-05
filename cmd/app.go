@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/XiovV/blog-api/config"
+	"github.com/XiovV/blog-api/pkg/mailer"
 	"github.com/XiovV/blog-api/pkg/repository"
 	"github.com/XiovV/blog-api/server"
 	"github.com/casbin/casbin/v2"
@@ -35,12 +36,15 @@ func main() {
 		return
 	}
 
+	mail := mailer.New(c.SMTPHost, c.SMTPPort, c.SMTPUsername, c.SMTPPassword, c.SMTPSender)
+
 	s := server.Server{
 		Config:         c,
 		UserRepository: userRepository,
 		PostRepository: postRepository,
 		Logger:         logger,
 		CasbinEnforcer: enforcer,
+		Mailer:         mail,
 	}
 
 	if err := s.Run(); err != nil {
