@@ -169,7 +169,7 @@ func (s *Server) deletePostHandler(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-// @Summary Deletes a post
+// @Summary Gets a post
 // @Tags post
 // @Accept json
 // @Produce json
