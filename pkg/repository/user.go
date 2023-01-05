@@ -87,6 +87,18 @@ func (r *UserRepository) InsertMfaSecret(userId int, secret []byte, recoveryCode
 	return nil
 }
 
+func (r *UserRepository) SetPassword(userId int, password string) error {
+	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
+	defer cancel()
+
+	_, err := r.db.ExecContext(ctx, "UPDATE \"user\" SET password = $1 WHERE id = $2", password, userId)
+	if err != nil {
+		return r.handleError(err)
+	}
+
+	return nil
+}
+
 func (r *UserRepository) SetRecoveryCodes(userId int, recoveryCodes []string) error {
 	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
 	defer cancel()
@@ -132,6 +144,20 @@ func (r *UserRepository) FindUserByUsername(username string) (User, error) {
 	defer cancel()
 
 	err := r.db.GetContext(ctx, &user, "SELECT \"user\".id, username, email, password, mfa_secret FROM \"user\" WHERE username = $1", username)
+	if err != nil {
+		return User{}, r.handleError(err)
+	}
+
+	return user, nil
+}
+
+func (r *UserRepository) FindUserByEmail(email string) (User, error) {
+	var user User
+
+	ctx, cancel := newBackgroundContext(DefaultQueryTimeout)
+	defer cancel()
+
+	err := r.db.GetContext(ctx, &user, "SELECT \"user\".id, username, email, password, mfa_secret FROM \"user\" WHERE email = $1", email)
 	if err != nil {
 		return User{}, r.handleError(err)
 	}
